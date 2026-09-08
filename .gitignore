@@ -18,3 +18,9 @@ env/
 # SO
 .DS_Store
 Thumbs.db
+
+# Export para NotebookLM (regenerable con notebooklm/_build_export.py)
+notebooklm/*.md
+notebooklm/*.pdf
+notebooklm/*_files/
+!notebooklm/_build_export.py

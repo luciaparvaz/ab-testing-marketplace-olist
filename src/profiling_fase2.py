@@ -7,7 +7,14 @@ y su varianza -> input del power analysis de la Fase 4, (b) dimensionar la muest
 
 Salida: outputs/tables/fase2_*.csv  y  un resumen por stdout.
 """
+
 from __future__ import annotations
+
+try:
+    import sys as _sys; _sys.stdout.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+
 import json
 from pathlib import Path
 
@@ -177,7 +184,7 @@ def main():
     }
 
     # ---- guardar ----
-    (OUT_T / "fase2_resumen.json").write_text(json.dumps(report, indent=2, ensure_ascii=False))
+    (OUT_T / "fase2_resumen.json").write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
 
     # tablas CSV utiles
     pd.Series(report["orders_por_mes"]).to_csv(OUT_T / "fase2_orders_por_mes.csv", header=["n_orders"])

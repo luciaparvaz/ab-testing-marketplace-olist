@@ -296,17 +296,20 @@
 
 ## Parte V — Debilidades del proyecto (síntesis honesta)
 
-| # | Debilidad | Severidad | ¿Intrínseca? | Mitigación existente |
+| # | Debilidad | Severidad | ¿Intrínseca? | Estado |
 |---|---|---|---|---|
 | 1 | **El experimento es simulado** → validez externa nula | Alta (pero es el planteamiento) | Sí | Declarado en cada documento; el proyecto valida el *proceso* |
-| 2 | **El modelo del efecto** (respondedores al azar, multiplicativo) condiciona la homogeneidad y el artefacto de p-hacking | Media | Parcial | Consecuencias analizadas explícitamente, no asumidas |
-| 3 | **MDE de relevancia +3 %** asertado, no derivado de un modelo de costes | Media | No | Barrido de decisión (§4.5); el efecto lo supera con holgura |
-| 4 | **Un solo split de análisis** (SEED 42) con +1,2 % de desbalance basal → punto sesgado al alza en esta realización | Baja-Media | No | IC, ANCOVA, e insesgadez sobre 1.000 réplicas |
-| 5 | **Guardrails sin efecto inyectado** → "no degradación" es trivial; no se demuestra que los tests cazarían una regresión | Media | No | Calibración A/A (indirecta); declarado como extensión |
+| 2 | **El modelo del efecto** condiciona la homogeneidad y el artefacto de p-hacking | Media | Parcial | Consecuencias analizadas; **§4.8 añade una variante con efecto heterogéneo real** y muestra que el diseño la detecta |
+| 3 | **MDE de relevancia +3 %** asertado | Media | No | **RESUELTO** — `src/mde_cost_model.py` deriva el break-even; el +3 % es válido para volumen ≥ ~415 k pedidos/año (§1.5) |
+| 4 | **Un solo split de análisis** (SEED 42) | Baja-Media | No | **RESUELTO** — §4.6 A/B multi-semilla (500): crudo insesgado, cobertura IC 0,94; el split es una realización normal |
+| 5 | **Guardrails sin efecto inyectado** → "no degradación" trivial | Media | No | **RESUELTO** — §4.7 inyecta regresiones en G1 y verifica que el diseño caza −0,08 y deja pasar −0,03; **regla de guardrail corregida** a "significativo Y magnitud" |
 | 6 | **Sin métrica de retención / LTV** | Baja | Sí (dato) | Recompra 3 % en Olist lo impide; declarado |
 
-**Ninguna es fatal.** Las nº 1 y 6 son consecuencia inevitable de elegir Olist. Las nº 3, 4 y 5 son
-las que yo abordaría con más tiempo (ver Parte VII).
+**Ninguna es fatal.** Tras las mejoras aplicadas, las únicas que quedan son la nº 1 y la nº 6,
+ambas consecuencia inevitable de elegir Olist, y un residuo de la nº 2 (la forma funcional del
+efecto sigue siendo una elección declarada). Hallazgo colateral de la mejora nº3 (multi-semilla):
+**la winsorización introduce un sesgo negativo de −0,36 pp** en el estimador puntual — se documenta
+en §4.6 y se reportan crudo y winsor por separado.
 
 ---
 
@@ -329,21 +332,18 @@ las que yo abordaría con más tiempo (ver Parte VII).
 
 ---
 
-## Parte VII — Si hubiera más tiempo (mejoras priorizadas)
+## Parte VII — Mejoras aplicadas (todas)
 
-1. **Inyectar una regresión sub-umbral en un guardrail** (p. ej. −0,03 en review_score, por debajo
-   del umbral de alarma de −0,05) y demostrar que el diseño la **deja pasar** correctamente; luego
-   una de −0,08 y demostrar que la **caza**. Convierte D19 de trivial en informativo.
-2. **Efecto heterogéneo real:** una variante del modelo donde los respondedores se concentran en
-   pedidos por debajo del umbral de envío gratis. Entonces el análisis por segmentos de la Fase 5
-   **tendría algo que encontrar**, y se podría medir la potencia para detectar heterogeneidad.
-3. **Análisis multi-semilla del A/B** (no solo del A/A): repetir el A/B completo sobre 500 semillas
-   y mostrar la distribución del estimador y la cobertura real del IC 95 % — cierra la debilidad nº 4.
-4. **Modelo de costes explícito** para derivar el MDE de relevancia en vez de asertarlo (debilidad nº 3).
-5. **Robustez del clúster:** ejecutar el análisis con todos los pedidos + SE por clúster de cliente
-   y confirmar que coincide con la versión deduplicada (ya está previsto, no ejecutado).
-6. **SRM check** (Sample Ratio Mismatch): test χ² formal de que el reparto 50,08/49,92 es
-   compatible con 50/50 (lo es: p ≈ 0,6, pero conviene reportarlo explícitamente).
+Las 6 mejoras propuestas en la primera versión de esta auditoría **se han implementado** (2ª pasada):
+
+| # | Mejora | Dónde | Resultado |
+|---|---|---|---|
+| 1 | Regresión inyectada en guardrail G1 + regla de dos puertas | `modeling.py :: guardrail_regression_scenarios` · §4.7 · §1.4 | El test caza −0,08 pts, deja pasar −0,03; regla corregida a "significativo **Y** magnitud" |
+| 2 | Variante con efecto heterogéneo real (bajo umbral de envío gratis) | `modeling.py :: heterogeneous_effect_variant` · §4.8 | Interacción detectada (p = 2·10⁻¹⁵); el análisis de segmentos funciona cuando hay algo que encontrar |
+| 3 | A/B multi-semilla (500 réplicas), crudo vs winsor | `modeling.py :: ab_multiseed` · §4.6 | Crudo insesgado (−0,03 pp), cobertura 0,94; **winsor con −0,36 pp de sesgo** (hallazgo nuevo) |
+| 4 | Modelo de costes para el MDE | `src/mde_cost_model.py` · §1.5 · `f_mde_breakeven.png` | El +3 % es break-even para volumen ≥ ~415 k pedidos/año (payback 2a) |
+| 5 | Todos los pedidos + SE por clúster de cliente | `modeling.py :: clustered_se_robustness` · §4.9 | Clustering infla el SE solo 1,1 %; lift +5,71 % vs +5,67 % deduplicado |
+| 6 | SRM check formal | `balance_check.py` · §3.5 · `fase3_srm.csv` | χ² = 0,216, p = 0,642 → sin SRM |
 
 ---
 
@@ -356,4 +356,8 @@ un dataset público de e-commerce y está gestionada con honestidad ejemplar: el
 haber descubierto nada sobre Olist, sino demostrar que sabe **diseñar, ejecutar, auditar y decidir**
 un experimento. Para un portfolio dirigido a roles de Product / Data Analyst, cumple con creces.
 
-Las mejoras de la Parte VII son incrementales, no correctivas.
+Las 6 mejoras de la Parte VII se han aplicado en una segunda pasada. Ninguna cambió la decisión
+(**LANZAR**); dos aportaron hallazgos nuevos: (a) la regla de guardrail necesitaba dos puertas
+("significativo Y magnitud") porque a n grande todo es significativo; (b) la winsorización, elegida
+para reducir varianza, introduce un sesgo puntual de −0,36 pp — se reportan crudo y winsor por
+separado.

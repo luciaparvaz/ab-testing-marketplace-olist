@@ -1,11 +1,14 @@
 # Fase 4 — Modeling (diseño estadístico del experimento)
 
 > CRISP-DM · Fase 4 de 6
-> Script reproducible: `src/modeling.py` (semillas fijas) → `outputs/tables/fase4_resumen.json`
-> Figuras: `outputs/figures/f4_01…04.png`
+> Scripts reproducibles: `src/modeling.py` · `src/mde_cost_model.py` (semillas fijas)
+> → `outputs/tables/fase4_resumen.json`, `mde_cost_model.csv`
+> Figuras: `outputs/figures/f4_01…04.png`, `f_mde_breakeven.png`
 
 En CRISP-DM, "Modeling" aquí = **el diseño y la ejecución del contraste estadístico**: power
 analysis a priori, verificación de supuestos, calibración A/A y el test A/B con el efecto declarado.
+Las §4.6–4.9 son las **mejoras de la auditoría global** (multi-semilla, regresión en guardrail,
+efecto heterogéneo, clustered-SE).
 
 Parámetros declarados (idénticos a §1.7b): `SEED=42`, `α=0,05` bilateral, efecto diluido
 `p_resp=0,20`, `δ_resp=0,25` → **ATE = +5 %**, `ε ~ N(0; 0,05)`.
@@ -117,8 +120,8 @@ arrastra el ruido de su asignación, de ahí que la decisión se ancle en el **I
 | G4 · nº de ítems | 1,140 | 1,138 | 0,58 | 0,77 | ❌ no |
 
 **Ningún guardrail se degrada** (ningún p ajustado < 0,05). Es el resultado esperado: el diseño solo
-inyecta efecto en la métrica primaria. *(Extensión natural: inyectar una regresión sub-umbral en G1
-y comprobar que el diseño la detecta o la deja pasar según el umbral de alarma.)*
+inyecta efecto en la métrica primaria. La capacidad real de los tests de guardrail para **cazar**
+una regresión se verifica en §4.7.
 
 ---
 
@@ -143,16 +146,104 @@ efecto claramente relevante se dispara "LANZAR".
 
 ---
 
-## 4.6 Cierre de la Fase 4 y traspaso a la Fase 5
+## 4.6 A/B multi-semilla — ¿es fiable el resultado de un solo split? (mejora nº3)
+
+Se repite el **A/B completo** (re-split 50/50 + re-inyección del efecto diluido + Welch) sobre
+**500 semillas**, en crudo y en winsorizado, para medir la distribución del estimador y la
+**cobertura real** del IC 95 %.
+
+| | lift medio | sesgo | sd (pp) | p2,5–p97,5 | cobertura IC 95 % del +5 % real | potencia |
+|---|---:|---:|---:|---:|---:|---:|
+| **AOV crudo** | +4,97 % | **−0,03 pp** | 1,05 | [+2,9 %; +7,1 %] | **0,94** | 1,00 |
+| **AOV winsor p99,5** | +4,64 % | **−0,36 pp** | 0,87 | [+2,9 %; +6,2 %] | **0,92** | 1,00 |
+
+**Hallazgos:**
+
+1. **En crudo el estimador es insesgado** (−0,03 pp) y el IC 95 % tiene **cobertura nominal**
+   (0,94 ≈ 0,95). El resultado de +6,1 % del split `SEED=42` cae dentro de [+2,9 %; +7,1 %] — es una
+   realización normal, no un artefacto.
+2. **La winsorización introduce un sesgo negativo pequeño** (−0,36 pp) porque el efecto es
+   multiplicativo y el recorte a p99,5 muerde más los valores altos del grupo *treatment*. A cambio
+   reduce la desviación del estimador (0,87 vs 1,05) — el **MSE es menor con winsor** (0,88 vs 1,11),
+   pero el IC **infra-cubre ligeramente** (0,92).
+3. **Implicación:** para el **contraste** (¿hay efecto? ¿supera el MDE?) la winsorización es
+   preferible (más potencia, menos MSE). Para la **estimación puntual del tamaño** del efecto, el
+   crudo es insesgado. Se reportan ambos; la decisión (LANZAR) es idéntica bajo los dos.
+
+Esto **cierra la debilidad "un solo split"** (auditoría global nº4): el estimador es fiable en
+repetición y los IC están (casi) bien calibrados.
+
+---
+
+## 4.7 Regresión inyectada en un guardrail — ¿lo caza el diseño? (mejora nº1)
+
+Se inyecta una regresión aditiva en `review_score` (G1) solo en el *treatment* y se aplica la
+**regla de dos puertas** (significativo **Y** magnitud ≥ 0,05 pts, auditoría global §D19):
+
+| Regresión inyectada | diff observada | p-valor | ¿Significativo? | ¿Magnitud ≥ 0,05? | Regla "O" (original) | **Regla "Y" (corregida)** |
+|---:|---:|---:|:--:|:--:|:--:|:--:|
+| 0,00 | +0,002 | 0,80 | ❌ | ❌ | no bloquea | **no bloquea** ✅ |
+| −0,03 | −0,028 | 0,001 | ✅ | ❌ | **bloquea (falso)** | **no bloquea** ✅ |
+| −0,05 | −0,048 | 3·10⁻⁸ | ✅ | ❌ (justo por debajo) | bloquea | no bloquea (límite) |
+| −0,08 | −0,078 | 2·10⁻¹⁹ | ✅ | ✅ | bloquea | **bloquea** ✅ |
+
+**Hallazgos:**
+
+- A n ≈ 47 k/grupo, **cualquier regresión real es estadísticamente significativa** (incluso −0,03 pts
+  da p ≈ 0,001). El test de guardrail tiene **potencia sobrada**.
+- La regla original ("significativo **O** magnitud") **bloquearía el lanzamiento por ruido
+  sub-umbral**. La regla corregida ("significativo **Y** magnitud") deja pasar −0,03 (correcto) y
+  caza −0,08 (correcto). → **§1.4 actualizado.**
+
+---
+
+## 4.8 Variante con efecto realmente heterogéneo (mejora nº2)
+
+El análisis principal inyecta un efecto **homogéneo** (respondedores al azar). Aquí se prueba una
+variante donde el efecto se **concentra en pedidos por debajo de un umbral hipotético de envío
+gratis (R$ 150)** — más realista para la barra de progreso.
+
+| | valor |
+|---|---|
+| Pedidos en la banda [R$ 90, R$ 150) | 22,4 % |
+| Lift **en la banda** | **+7,05 %** |
+| Lift **fuera de la banda** | +1,52 % |
+| Test de interacción `treatment × banda` (log, HC3) | **p = 2·10⁻¹⁵** |
+
+**El diseño detecta la heterogeneidad real** (p minúsculo), a diferencia del análisis principal
+(efecto homogéneo → ninguna interacción, §5.4). → El análisis por segmentos **sí funciona** cuando
+hay algo que encontrar; su resultado nulo en el análisis principal no es falta de potencia.
+
+---
+
+## 4.9 Robustez: todos los pedidos + SE por clúster de cliente (mejora nº5)
+
+| | lift | SE (R$) |
+|---|---:|---:|
+| Dedup a 1 pedido/cliente (análisis principal) | +5,67 % | 1,14 (Welch) |
+| **Todos los pedidos + SE por clúster de cliente** | **+5,71 %** | **1,14 (cluster)** |
+| Todos los pedidos + SE robusto sin clustering | +5,71 % | 1,12 |
+
+El clustering **infla el SE solo un 1,1 %** (el 97 % de los clientes tiene un solo pedido) y el lift
+es prácticamente el mismo. **Deduplicar fue la opción simple y correcta**; no cambia ninguna
+conclusión.
+
+---
+
+## 4.10 Cierre de la Fase 4 y traspaso a la Fase 5
 
 - [x] Power analysis a priori: MDE detectable +2,79 % / +2,34 %; potencia ~100 % para +5 %;
-  estimador insesgado; **penalización por dilución < 1 pp (despreciable, cuantificado)**.
+  **penalización por dilución < 1 pp (despreciable, cuantificado)**.
 - [x] Supuestos verificados: normalidad de la media por TCL (p = 0,83), heterocedasticidad bajo H1
   → **Welch justificado**, independencia por diseño.
 - [x] Calibración A/A (2.000 particiones): falsos positivos 5,0 %, p-valores uniformes (KS p ≥ 0,5).
-- [x] Test A/B: **+5,67 % [+3,99 %; +7,34 %], p = 3·10⁻¹¹**; IC contiene el +5 % real.
-- [x] Guardrails con BH: **ninguno degradado**.
+- [x] Test A/B: **+5,67 % [+3,99 %; +7,34 %], p = 3·10⁻¹¹** (winsor) / **+6,11 % [+4,09 %; +8,13 %]**
+  (crudo); ambos contienen el +5 % real.
+- [x] Guardrails con BH: **ninguno degradado**; regla corregida a "significativo Y magnitud".
 - [x] Barrido de decisión: las tres ramas de la regla son alcanzables.
-- **Siguiente (Fase 5 — Evaluation):** traducir a decisión de producto (significancia vs.
-  relevancia frente al MDE), análisis por segmentos (con control de p-hacking), y conclusión
-  lanzar / iterar / no lanzar.
+- [x] **A/B multi-semilla** (500): crudo insesgado y con cobertura nominal; winsor con −0,36 pp de
+  sesgo y menor MSE. El split `SEED=42` es una realización normal.
+- [x] **Guardrail regression / efecto heterogéneo / clustered-SE / SRM / modelo de costes del MDE**
+  (mejoras de la auditoría global) ejecutados.
+- **Siguiente (Fase 5 — Evaluation):** significancia vs. relevancia, segmentos con control de
+  p-hacking, decisión.

@@ -34,9 +34,9 @@ Es el trabajo que hace un equipo de experimentación de producto.
 |---|---|---|
 | **1 · Business Understanding** | Problema, H0/H1, métrica primaria (AOV), guardrails G1–G4, MDE de relevancia (+3 %), regla de decisión | `docs/01_business_understanding.md` |
 | **2 · Data Understanding** | Perfilado dirigido; licencia **CC BY-NC-SA 4.0** verificada | AOV media R$ 137 · **CV 1,52 · skew 9,8** · `log(AOV)` casi simétrico |
-| **3 · Data Preparation** | Ventana 2017-01/2018-08 · dedup a 1 pedido/cliente · winsor p99,5 solo para el contraste · asignación simulada | 94.703 pedidos-cliente · **balance OK** (todas \|SMD\| ≤ 0,02) |
-| **4 · Modeling** | Power analysis · supuestos · A/A 2.000 particiones · test A/B | MDE detectable **+2,3 %** · A/A calibrado · penalización por dilución **< 1 pp** |
-| **5 · Evaluation** | Significancia vs relevancia · ANCOVA · segmentos + BH · p-hacking | **+5,7 %** [+4,0 %, +7,3 %] · guardrails intactos · efecto homogéneo → **LANZAR** |
+| **3 · Data Preparation** | Ventana 2017-01/2018-08 · dedup a 1 pedido/cliente · winsor p99,5 solo para el contraste · asignación simulada | 94.703 pedidos-cliente · **balance OK** (\|SMD\| ≤ 0,02) · **SRM OK** (p = 0,64) |
+| **4 · Modeling** | Power analysis · supuestos · A/A 2.000 part. · test A/B · A/B multi-semilla · regresión en guardrail · efecto heterogéneo · clustered-SE · modelo de costes del MDE | MDE detectable **+2,3 %** · A/A calibrado · dilución **< 1 pp** · **MDE +3 % = break-even** |
+| **5 · Evaluation** | Significancia vs relevancia · ANCOVA · segmentos + BH · p-hacking | **+5,7 % (winsor) / +6,1 % (crudo)**, ambos IC > +3 % · guardrails intactos · efecto homogéneo → **LANZAR** |
 | **6 · Deployment** | Resumen ejecutivo · notebook · README · post LinkedIn | `docs/resumen_ejecutivo.md` · `notebooks/ab_test_olist.ipynb` |
 
 ### Hallazgos metodológicos del proyecto
@@ -50,6 +50,12 @@ Es el trabajo que hace un equipo de experimentación de producto.
   por variables ligadas al tamaño de cesta, aparecen "segmentos ganadores" falsos que **sobreviven
   a Bonferroni**. En la escala correcta (log, efecto relativo), no queda nada. *Corregir por
   multiplicidad no salva un estimando mal planteado.*
+- **La winsorización, elegida para reducir varianza, introduce un sesgo puntual de −0,36 pp**
+  (verificado con A/B multi-semilla sobre 500 réplicas). Se reportan crudo (insesgado) y winsor.
+- **A n grande, cualquier regresión de guardrail es significativa** → la regla necesita **dos
+  puertas** (significativo **Y** magnitud ≥ umbral), no una.
+- **El MDE de relevancia (+3 %) está derivado**, no asertado: es el *break-even* del rediseño
+  (`src/mde_cost_model.py`), válido para un marketplace con ≥ ~415 k pedidos/año.
 
 ---
 
@@ -62,18 +68,19 @@ Es el trabajo que hace un equipo de experimentación de producto.
 ├── src/
 │   ├── profiling_fase2.py       # Fase 2 — perfilado
 │   ├── prepare_data.py          # Fase 3 — tabla analítica + asignación simulada
-│   ├── balance_check.py         # Fase 3 — covariate balance check
-│   ├── modeling.py              # Fase 4 — power, supuestos, A/A, A/B, guardrails
+│   ├── balance_check.py         # Fase 3 — covariate balance check + SRM
+│   ├── modeling.py              # Fase 4 — power, supuestos, A/A, A/B, guardrails, multi-semilla…
+│   ├── mde_cost_model.py        # Fase 4 — MDE de relevancia derivado de un break-even
 │   └── evaluation.py            # Fase 5 — decisión, segmentos, p-hacking
 ├── notebooks/
 │   ├── ab_test_olist.ipynb      # notebook narrativo reproducible (ejecutado)
 │   └── ab_test_olist.py         # fuente jupytext (control de versiones)
 ├── outputs/
-│   ├── figures/                 # f2_*, f3_*, f4_*, f5_*
-│   └── tables/                  # fase{2..5}_resumen.json, transformaciones, balance, segmentos
+│   ├── figures/                 # f2_*, f3_*, f4_*, f5_*, f_mde_breakeven
+│   └── tables/                  # fase{2..5}_resumen.json, transformaciones, balance, srm, segmentos, mde
 ├── docs/
-│   ├── 01_business_understanding.md … 05_evaluation.md
-│   ├── auditoria_fase1_fase2.md · auditoria_fase5.md
+│   ├── 01_business_understanding.md … 06_deployment.md
+│   ├── auditoria_fase1_fase2.md · auditoria_fase5.md · auditoria_global.md
 │   ├── resumen_ejecutivo.md
 │   └── linkedin_post.md
 └── requirements.txt
@@ -105,11 +112,12 @@ python -m kaggle datasets download -d olistbr/brazilian-ecommerce -p data/raw --
 ```bash
 python src/profiling_fase2.py      # Fase 2
 python src/prepare_data.py         # Fase 3 — genera data/processed/analytical_table.parquet
-python src/balance_check.py        # Fase 3
-python src/modeling.py             # Fase 4  (~40 s: simulaciones con semilla fija)
+python src/balance_check.py        # Fase 3 — balance + SRM
+python src/mde_cost_model.py       # Fase 4 — MDE break-even
+python src/modeling.py             # Fase 4  (~3-4 min: simulaciones con semilla fija)
 python src/evaluation.py           # Fase 5
 
-# o el notebook completo de una vez:
+# o el notebook completo de una vez (~6 min):
 jupyter nbconvert --to notebook --execute --inplace notebooks/ab_test_olist.ipynb
 ```
 

@@ -85,6 +85,11 @@ Criterios: **|SMD| < 0,10** por covariable y **test ómnibus no significativo** 
 **Todas las |SMD| ≤ 0,02** (muy por debajo de 0,10) y **ningún test ómnibus es significativo**
 (p mínimo 0,32). Ver `f3_01_balance.png`. → **Los grupos son intercambiables.**
 
+### SRM check (Sample Ratio Mismatch)
+
+χ² del reparto observado (47.280 / 47.423) frente a 50/50: **χ² = 0,216, p = 0,642** → el reparto
+es compatible con 50/50, sin indicio de fuga diferencial de unidades. (`outputs/tables/fase3_srm.csv`).
+
 ### Chequeo A/A puntual sobre la métrica primaria (SEED = 42)
 
 | | control | treatment | diferencia | Welch-t |
@@ -108,6 +113,7 @@ aleatorios es normal** — de ahí la necesidad del test formal y no del ojo. La
 - [x] Winsorización p99,5 en columna separada `merch_value_w` (solo para el contraste).
 - [x] Asignación simulada 50/50 por cliente, `SEED = 42`.
 - [x] Covariate balance check **superado** (|SMD| ≤ 0,02; todos los ómnibus no significativos).
+- [x] SRM check **superado** (χ² = 0,216, p = 0,642).
 - [x] Tabla analítica persistida en `data/processed/analytical_table.parquet`.
 - **Siguiente (Fase 4 — Modeling):** power analysis (a priori, con el efecto diluido), verificación
   de supuestos del test, A/A sobre 1.000 semillas (error tipo I + uniformidad de p-valores),

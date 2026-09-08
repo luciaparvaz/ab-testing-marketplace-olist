@@ -94,10 +94,17 @@ efecto de tratamiento sobre observaciones reales (ver §1.7).
 
 | Guardrail | Definición | Umbral de alarma | Test |
 |---|---|---|---|
-| G1 — Satisfacción | `review_score` medio (1–5) | Caída ≥ 0,05 pts **o** diferencia significativa a la baja | t-test / Mann–Whitney |
-| G2 — Cancelación | % de pedidos con `order_status == 'canceled'` | Subida significativa | Test de proporciones (z) |
-| G3 — Flete asumido | `freight_value` medio por pedido | Subida significativa que compense el alza de AOV | t-test |
-| G4 — Frecuencia | Pedidos por cliente en la ventana | Caída significativa (que el AOV no suba solo por comprar menos veces) | Test de proporciones / t-test |
+| G1 — Satisfacción | `review_score` medio (1–5) | Caída significativa **Y** magnitud ≥ 0,05 pts | t-test / Mann–Whitney |
+| G2 — Cancelación | % de pedidos con `order_status == 'canceled'` | Subida significativa **Y** magnitud ≥ 0,2 pp | Test de proporciones (z) |
+| G3 — Flete asumido | `freight_value` medio por pedido | Subida significativa **Y** que absorba ≥ 20 % del alza de AOV | t-test |
+| G4 — Frecuencia | Pedidos por cliente en la ventana | Caída significativa **Y** magnitud relevante | Test de proporciones / t-test |
+
+**Regla de dos puertas (corregida tras la auditoría global §D19):** a n ≈ 47 k/grupo, *cualquier*
+regresión real es estadísticamente significativa (incluso −0,03 pts en `review_score` da
+p ≈ 0,001). Una regla "significativo **O** magnitud" bloquearía el lanzamiento por ruido
+sub-umbral. Se exige **significativo Y magnitud ≥ umbral** — verificado en la Fase 4 (`modeling.py
+:: guardrail_regression_scenarios`): con la regla corregida una regresión de −0,03 no bloquea
+(correcto) y una de −0,08 sí (correcto).
 
 Las métricas guardrail se testan con **corrección por comparaciones múltiples** (ver §1.6).
 
@@ -112,9 +119,16 @@ construir y mantener el rediseño (esfuerzo de ingeniería + diseño + mantenimi
 recomendación).
 
 - El MDE de relevancia se fija **en términos relativos: +3 % sobre el AOV base**.
-- Justificación: por debajo de ~+3 % el incremento de margen anual del marketplace no cubre el coste
-  incremental de operar un motor de cross-sell (regla de negocio asumida para el proyecto; el valor
-  exacto se recalibra en la Fase 5 con el AOV y el volumen reales una vez perfilados en la Fase 2).
+- Justificación (modelo de costes en `src/mde_cost_model.py`, mejora nº4 de la auditoría global):
+  el break-even es `lift = coste_total / (AOV · volumen · comisión · margen · años)`. Con asunciones
+  ilustrativas (AOV R$ 137, comisión 15 %, margen neto 80 %, construir R$ 250 k, mantener R$ 80 k/año,
+  payback 2 años), el break-even cae con el volumen de pedidos:
+  - a ~58.700 pedidos/año (el propio dataset) → break-even **~+21 %** (el +3 % **no** estaría
+    justificado a esa escala);
+  - a ~1.000.000 pedidos/año (marketplace mediano) → break-even **~+1,25 %** (el +3 % es
+    **conservador**).
+  El proyecto asume la segunda escala. **El +3 % es válido para un marketplace con ≥ ~415.000
+  pedidos/año** (payback 2 años). Ver `outputs/figures/f_mde_breakeven.png`.
 - El **cálculo de potencia de la Fase 4** invierte el problema: con el tamaño muestral **fijo** que
   impone el dataset (~95 k clientes), se calculará **qué MDE se puede detectar al 80 % de potencia y
   α = 0,05 bilateral**, y se comparará con el umbral de relevancia de +3 %.

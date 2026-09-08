@@ -12,7 +12,14 @@ Traduce el resultado estadístico de la Fase 4 a una decisión de producto:
 Reutiliza el efecto diluido declarado (SEED=42) de src/modeling.py.
 Salida: outputs/tables/fase5_*.csv/json · outputs/figures/f5_*.png
 """
+
 from __future__ import annotations
+
+try:
+    import sys as _sys; _sys.stdout.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+
 import json
 from pathlib import Path
 
@@ -318,7 +325,7 @@ def main():
             return float(o)
         raise TypeError(type(o))
 
-    (OUT_T / "fase5_resumen.json").write_text(json.dumps(out, indent=2, ensure_ascii=False, default=_js))
+    (OUT_T / "fase5_resumen.json").write_text(json.dumps(out, indent=2, ensure_ascii=False, default=_js), encoding="utf-8")
     print(json.dumps(out, indent=2, ensure_ascii=False, default=_js))
 
 

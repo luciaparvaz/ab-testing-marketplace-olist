@@ -13,7 +13,14 @@ Salida:
   data/processed/analytical_table.parquet
   outputs/tables/fase3_transformaciones.csv
 """
+
 from __future__ import annotations
+
+try:
+    import sys as _sys; _sys.stdout.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+
 from pathlib import Path
 import numpy as np
 import pandas as pd

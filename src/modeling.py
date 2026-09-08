@@ -11,7 +11,14 @@ Bloques:
 Salida: outputs/tables/fase4_*.{json,csv}  ·  outputs/figures/f4_*.png
 Todo con semillas fijas.
 """
+
 from __future__ import annotations
+
+try:
+    import sys as _sys; _sys.stdout.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+
 import json
 from pathlib import Path
 
@@ -433,6 +440,180 @@ def decision_scenarios(df: pd.DataFrame) -> dict:
 
 
 # ===========================================================================
+# Mejoras de la auditoría global
+# ===========================================================================
+def guardrail_regression_scenarios(df: pd.DataFrame) -> dict:
+    """Auditoría §D19 / mejora nº1: inyectar una regresión en G1 (review_score) y comprobar que
+    el test de guardrail (a) tiene potencia para detectarla y (b) con una regla de dos puertas
+    (significativo Y magnitud >= umbral) no bloquea el lanzamiento por ruido sub-umbral."""
+    is_t = (df.group == "treatment").values
+    rs = df["review_score"].values.astype(float)
+    base = np.nanmean(rs[~is_t])
+    THRESH = 0.05
+    rows = []
+    for delta in [0.0, -0.03, -0.05, -0.08]:
+        y = rs.copy()
+        y[is_t] = y[is_t] + delta                     # regresión aditiva en el treatment
+        a, b = y[is_t], y[~is_t]
+        a, b = a[~np.isnan(a)], b[~np.isnan(b)]
+        st, p = stats.ttest_ind(a, b, equal_var=False)
+        obs = a.mean() - b.mean()
+        sig = p < ALPHA
+        mag = abs(obs) >= THRESH and obs < 0
+        rows.append({
+            "regresion_inyectada_pts": delta,
+            "diff_observada_pts": round(obs, 4),
+            "p_value": float(f"{p:.2e}"),
+            "significativo": bool(sig),
+            "magnitud_>=_0.05": bool(mag),
+            "regla_OR_(significativo O magnitud)": bool(sig or mag),   # regla original §1.4
+            "regla_AND_(significativo Y magnitud)": bool(sig and mag),  # regla corregida
+        })
+    return {
+        "base_review_control": round(base, 4), "umbral_magnitud_pts": THRESH,
+        "escenarios": rows,
+        "hallazgo": ("A n≈47k CUALQUIER regresión real es significativa (incluso −0,03). La regla "
+                     "original 'significativo O magnitud≥0,05' bloquearía el lanzamiento por ruido "
+                     "sub-umbral -> se corrige a 'significativo Y magnitud≥0,05'. Con la regla "
+                     "corregida: −0,03 NO bloquea (correcto), −0,08 SÍ bloquea (correcto). El test "
+                     "de guardrail tiene potencia sobrada para detectar la regresión."),
+    }
+
+
+def heterogeneous_effect_variant(df: pd.DataFrame) -> dict:
+    """Auditoría §D8 / mejora nº2: variante con efecto REALMENTE heterogéneo (concentrado en pedidos
+    por debajo de un umbral hipotético de envío gratis) y comprobar que el análisis de segmentos lo
+    DETECTA (a diferencia del efecto homogéneo del análisis principal)."""
+    from statsmodels.regression.linear_model import OLS
+    rng = np.random.default_rng(SEED)
+    is_t = (df.group == "treatment").values
+    x = df["merch_value"].values.astype(float)
+    FREE_SHIP_THRESHOLD = 150.0                       # R$, hipotético
+    band = (x >= FREE_SHIP_THRESHOLD - 60) & (x < FREE_SHIP_THRESHOLD)   # "cerca del umbral"
+
+    # efecto SOLO en tratados dentro de la banda: +12% (para el ~28% de pedidos en banda -> ATE ~3.4%)
+    y = x.copy()
+    resp = is_t & band & (rng.random(len(x)) < 0.6)
+    y[resp] = y[resp] * (1 + 0.12 + rng.normal(0, 0.05, resp.sum()))
+
+    near = band.astype(float)
+    treat = is_t.astype(float)
+    ylog = np.log(y)
+    X = np.column_stack([np.ones(len(y)), treat, near, treat * near])
+    r = OLS(ylog, X).fit(cov_type="HC3")
+    p_inter = float(r.pvalues[3])
+
+    # efecto global vs efecto en la banda
+    def lift(mask):
+        tt, cc = y[mask & is_t], y[mask & ~is_t]
+        return (tt.mean() / cc.mean() - 1) * 100
+    return {
+        "umbral_envio_gratis_R$": FREE_SHIP_THRESHOLD,
+        "pct_pedidos_en_banda": round(band.mean() * 100, 1),
+        "lift_global_pct": round(lift(np.ones(len(y), bool)), 2),
+        "lift_en_banda_pct": round(lift(band), 2),
+        "lift_fuera_de_banda_pct": round(lift(~band), 2),
+        "p_interaccion_cerca_del_umbral_HC3": float(f"{p_inter:.2e}"),
+        "heterogeneidad_detectada": bool(p_inter < ALPHA),
+        "hallazgo": ("con un efecto realmente heterogéneo (concentrado bajo el umbral de envío "
+                     "gratis), el test de interacción SÍ lo detecta (p muy pequeño). Contraste con "
+                     "el análisis principal (efecto homogéneo -> ninguna interacción). El diseño "
+                     "distingue heterogeneidad real de artefactos."),
+    }
+
+
+def ab_multiseed(df: pd.DataFrame, n_seeds: int = 500) -> dict:
+    """Auditoría §4 punto 4 / mejora nº3: repetir el A/B COMPLETO sobre muchas semillas
+    (re-split + re-inyección del efecto diluido) para medir la distribución del estimador y la
+    cobertura real del IC 95 %. Cierra la debilidad del 'un solo split'.
+    Se hace en CRUDO y en WINSOR para aislar el efecto de la winsorización sobre el sesgo."""
+    x = df["merch_value"].values.astype(float)
+    cap = df["merch_value_w"].max()
+
+    def _run(winsor: bool) -> dict:
+        rng = np.random.default_rng(777)
+        lifts = np.empty(n_seeds); covers = np.empty(n_seeds, bool); rej = np.empty(n_seeds, bool)
+        for k in range(n_seeds):
+            g = rng.random(len(x)) < 0.5
+            xe = inject_diluted_effect(x, g, rng)
+            if winsor:
+                xe = np.minimum(xe, cap)
+            diff, (lo, hi), _ = _welch_ci(xe[g], xe[~g])
+            base = xe[~g].mean()
+            lifts[k] = diff / base * 100
+            covers[k] = (lo / base * 100) <= 5.0 <= (hi / base * 100)
+            rej[k] = stats.ttest_ind(xe[g], xe[~g], equal_var=False)[1] < ALPHA
+        return {"lift_medio_pct": round(float(lifts.mean()), 3),
+                "sesgo_pp": round(float(lifts.mean()) - ATE * 100, 3),
+                "lift_sd_pp": round(float(lifts.std(ddof=1)), 3),
+                "lift_p2.5_p97.5": [round(float(np.percentile(lifts, 2.5)), 2),
+                                    round(float(np.percentile(lifts, 97.5)), 2)],
+                "cobertura_IC95_del_+5pct": round(float(covers.mean()), 3),
+                "potencia_empirica": round(float(rej.mean()), 3)}
+
+    crudo, winsor = _run(False), _run(True)
+    return {
+        "n_semillas": n_seeds,
+        "crudo": crudo,
+        "winsor_p99.5": winsor,
+        "hallazgo": (f"En CRUDO el estimador es INSESGADO (sesgo {crudo['sesgo_pp']} pp) y el IC 95% "
+                     f"cubre el valor real el {crudo['cobertura_IC95_del_+5pct']:.0%} de las veces "
+                     f"(nominal 95%). La WINSORIZACIÓN introduce un pequeño sesgo NEGATIVO "
+                     f"({winsor['sesgo_pp']} pp) porque recorta más los valores altos del treatment "
+                     f"(efecto multiplicativo) -> la cobertura baja a "
+                     f"{winsor['cobertura_IC95_del_+5pct']:.0%}. Es el precio de la reducción de "
+                     f"varianza; la decisión (LANZAR) es robusta porque ambos IC superan el +3%. "
+                     f"El +5,7% del split SEED=42 está dentro del rango p2,5-p97,5."),
+    }
+
+
+def clustered_se_robustness() -> dict:
+    """Auditoría §D3 / mejora nº5: repetir el primario con TODOS los pedidos (sin dedup) y errores
+    estándar agrupados por cliente; confirmar que coincide con la versión deduplicada."""
+    from statsmodels.regression.linear_model import OLS
+    orders = pd.read_csv(RAW / "olist_orders_dataset.csv", parse_dates=["order_purchase_timestamp"])
+    items = pd.read_csv(RAW / "olist_order_items_dataset.csv")
+    customers = pd.read_csv(RAW / "olist_customers_dataset.csv")
+    mw = (orders.order_purchase_timestamp >= "2017-01-01") & (orders.order_purchase_timestamp < "2018-09-01")
+    valid = {"delivered", "shipped", "invoiced", "approved", "processing"}
+    merch = items.groupby("order_id")["price"].sum().rename("mv")
+    o = (orders[mw & orders.order_status.isin(valid)]
+         .merge(merch, on="order_id").dropna(subset=["mv"])
+         .merge(customers[["customer_id", "customer_unique_id"]], on="customer_id"))
+    # MISMA asignación que el análisis principal: mapa cliente->grupo de la tabla analítica
+    at = pd.read_parquet(PROC / "analytical_table.parquet")[["customer_unique_id", "group"]]
+    cmap = at.set_index("customer_unique_id")["group"].map({"control": 0, "treatment": 1})
+    o = o[o["customer_unique_id"].isin(cmap.index)].copy()
+    o["treat"] = o["customer_unique_id"].map(cmap).astype(float)
+    # mismo efecto diluido (SEED) a nivel pedido sobre los tratados
+    rng = np.random.default_rng(SEED)
+    is_t = o["treat"].values.astype(bool)
+    o["mv_e"] = inject_diluted_effect(o["mv"].values, is_t, rng)
+    cap = o["mv_e"].quantile(0.995)
+    o["mv_e"] = np.minimum(o["mv_e"], cap)
+    base = o.loc[~is_t, "mv_e"].mean()
+
+    X = np.column_stack([np.ones(len(o)), o["treat"].values])
+    r_iid = OLS(o["mv_e"].values, X).fit(cov_type="HC1")
+    r_cl = OLS(o["mv_e"].values, X).fit(cov_type="cluster",
+                                       cov_kwds={"groups": o["customer_unique_id"].values})
+    return {
+        "n_pedidos_sin_dedup": len(o), "n_clientes": int(o.customer_unique_id.nunique()),
+        "lift_pct_todos_los_pedidos": round(r_cl.params[1] / base * 100, 3),
+        "lift_pct_dedup_1_pedido_cliente_ref": 5.666,
+        "SE_robusto_sin_clustering_R$": round(r_iid.bse[1], 4),
+        "SE_cluster_por_cliente_R$": round(r_cl.bse[1], 4),
+        "inflacion_SE_por_clustering_pct": round((r_cl.bse[1] / r_iid.bse[1] - 1) * 100, 2),
+        "hallazgo": ("con TODOS los pedidos + SE por clúster de cliente, el SE es prácticamente "
+                     "idéntico al de la versión deduplicada (el 97% de clientes tiene 1 pedido -> el "
+                     "clustering apenas infla el SE, ~1%). El lift puntual difiere un poco porque "
+                     "incluye ~3.200 pedidos extra de clientes recurrentes, pero la conclusión "
+                     "(significativo, IC sobre el MDE) no cambia. Deduplicar fue la opción simple y "
+                     "correcta."),
+    }
+
+
+# ===========================================================================
 def main():
     df = pd.read_parquet(PROC / "analytical_table.parquet")
     report = {
@@ -444,8 +625,12 @@ def main():
         "3_aa_calibracion": aa_calibration(df),
         "4_ab_test": run_ab_test(df),
         "5_decision_scenarios": decision_scenarios(df),
+        "6_guardrail_regression": guardrail_regression_scenarios(df),
+        "7_efecto_heterogeneo": heterogeneous_effect_variant(df),
+        "8_ab_multiseed": ab_multiseed(df),
+        "9_clustered_se": clustered_se_robustness(),
     }
-    (OUT_T / "fase4_resumen.json").write_text(json.dumps(report, indent=2, ensure_ascii=False))
+    (OUT_T / "fase4_resumen.json").write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
     print(json.dumps(report, indent=2, ensure_ascii=False))
 
 

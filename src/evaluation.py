@@ -43,6 +43,18 @@ def _coef(res, names, name):
     ci = res.conf_int()
     return res.params[i], res.bse[i], ci[i, 0], ci[i, 1]
 
+
+def interaction_wald_hc3(y: np.ndarray, treat: np.ndarray, seg_dummies: np.ndarray) -> float:
+    """p-valor Wald robusto (HC3) del bloque de interacciones treat x segmento.
+    Necesario porque bajo H1 hay heterocedasticidad entre grupos (Fase 4)."""
+    k = seg_dummies.shape[1]
+    X = np.column_stack([np.ones(len(y)), treat, seg_dummies, seg_dummies * treat[:, None]])
+    res = OLS(y, X).fit(cov_type="HC3")
+    R = np.zeros((k, X.shape[1]))
+    for i in range(k):
+        R[i, X.shape[1] - k + i] = 1.0
+    return float(res.wald_test(R, scalar=True).pvalue)
+
 from modeling import inject_diluted_effect, SEED, ALPHA, ATE, MDE_RELEVANCIA
 
 RAW = Path("data/raw")
@@ -179,19 +191,11 @@ def main():
             seg_rows.append({"segmento": seg, "nivel": str(lvl), **{k: round(v, 3) for k, v in r.items()}})
         # test de interacción group:segmento sobre log(AOV): ¿el efecto RELATIVO es heterogéneo?
         # (en nivel, el efecto multiplicativo da un lift absoluto mayor en cestas grandes -> se
-        #  detectaría 'heterogeneidad' mecánica; el negocio pregunta por el % , de ahí el log)
-        sub = df[[seg, "mv", "group"]].copy()
-        sub["y"] = np.log(sub["mv"].values)
-        sub["treat"] = (sub.group == "treatment").astype(int)
-        seg_d = pd.get_dummies(sub[seg], prefix=seg, drop_first=True, dtype=float)
-        Xr = pd.concat([pd.Series(1.0, index=sub.index, name="const"), sub["treat"], seg_d], axis=1)
-        inter = seg_d.mul(sub["treat"], axis=0)
-        inter.columns = [f"treatX_{c}" for c in seg_d.columns]
-        Xf = pd.concat([Xr, inter], axis=1)
-        rr = OLS(sub["y"].values, Xr.values).fit()
-        rf = OLS(sub["y"].values, Xf.values).fit()
-        fval, pval, ddiff = rf.compare_f_test(rr)
-        inter_p[seg] = float(pval)
+        #  detectaría 'heterogeneidad' mecánica; el negocio pregunta por el %, de ahí el log)
+        # Wald HC3: robusto a la heterocedasticidad entre grupos que introduce H1 (auditoría Fase 5).
+        seg_d = pd.get_dummies(df[seg], prefix=seg, drop_first=True, dtype=float).values
+        treat_s = (df.group == "treatment").values.astype(float)
+        inter_p[seg] = interaction_wald_hc3(np.log(df["mv"].values), treat_s, seg_d)
     seg_df = pd.DataFrame(seg_rows)
     seg_df.to_csv(OUT_T / "fase5_segmentos.csv", index=False)
 
@@ -204,9 +208,9 @@ def main():
                                  "heterogeneidad_significativa_tras_BH": bool(r),
                                  "n_por_nivel": seg_n[k]}
                              for k, pa, r in zip(keys, p_adj, rej)},
-        "escala_test": "log(AOV) -> contrasta heterogeneidad del efecto RELATIVO (%), que es la "
-                       "pregunta de negocio; en nivel, el efecto multiplicativo genera heterogeneidad "
-                       "absoluta mecánica en cestas grandes",
+        "escala_test": "log(AOV), Wald HC3 -> contrasta heterogeneidad del efecto RELATIVO (%), "
+                       "robusto a la heterocedasticidad entre grupos; en nivel el efecto "
+                       "multiplicativo genera heterogeneidad absoluta mecánica en cestas grandes",
         "veredicto": ("ninguna interacción significativa (ni bruta ni tras BH) -> el efecto relativo "
                       "es HOMOGÉNEO entre segmentos, coherente con el diseño (responders al azar). "
                       "Buscar 'dónde funciona mejor' sin corrección sería p-hacking."),
@@ -234,8 +238,8 @@ def main():
             continue
         inseg = mask.values.astype(float)
         X = np.column_stack([np.ones(len(df)), treat, inseg, treat * inseg])
-        p_level.append(OLS(y_level, X).fit().pvalues[3])
-        p_log.append(OLS(y_log, X).fit().pvalues[3])
+        p_level.append(OLS(y_level, X).fit(cov_type="HC3").pvalues[3])   # HC3 robusto
+        p_log.append(OLS(y_log, X).fit(cov_type="HC3").pvalues[3])
         names.append(f"{fam}:{lvl}")
     p_level, p_log = np.array(p_level), np.array(p_log)
 
@@ -250,15 +254,17 @@ def main():
     out["5_p_hacking"] = {
         "n_cortes_exploratorios": len(names),
         "esperados_por_azar_a_0.05": round(0.05 * len(names), 1),
+        "test": "interacción treat x corte, Wald HC3",
         "test_en_NIVEL_(mv_w)": _summ(p_level),
         "test_en_LOG_(efecto_relativo)": _summ(p_log),
-        "leccion": ("(1) En NIVEL aparecen 'segmentos donde el efecto es distinto' concentrados en "
-                    "cortes correlacionados con el tamaño de cesta (flete alto/bajo): son un "
-                    "ARTEFACTO MECÁNICO del efecto multiplicativo, no heterogeneidad real. "
-                    "(2) En LOG (el efecto relativo, que es la pregunta de negocio) no queda casi "
-                    "nada, y lo poco que hay no sobrevive a BH/Bonferroni. "
-                    "Moraleja: testar la magnitud correcta (% , no R$ absolutos), pre-especificar "
-                    "segmentos y corregir por multiplicidad."),
+        "leccion": ("(1) En NIVEL varios 'segmentos donde el efecto es distinto' sobreviven incluso "
+                    "a BH y a Bonferroni: NO son casualidad, son un ARTEFACTO MECÁNICO del efecto "
+                    "multiplicativo (el lift en R$ es mayor en cestas grandes), concentrado en los "
+                    "cortes correlacionados con el tamaño (cuartiles de flete). "
+                    "(2) En LOG (el efecto relativo, que es la pregunta de negocio) solo quedan "
+                    "hallazgos nominales de nivel-azar, y NINGUNO sobrevive a la corrección. "
+                    "Moraleja: (a) testar la magnitud correcta (%, no R$ absolutos), (b) pre-especificar "
+                    "segmentos, (c) corregir por multiplicidad. Corregir no basta si el estimando está mal."),
     }
 
     # ---- figura: forest plot de segmentos --------------------------

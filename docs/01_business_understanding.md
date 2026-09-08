@@ -122,8 +122,12 @@ recomendación).
   ~+2,7 % (datos crudos) o ~+2,3 % (winsorizado p99,5) — por debajo de +3 %, pero con un margen
   estrecho. La conclusión de "muestra suficientemente potente" **no se apoya en ese margen**, sino
   en la **potencia empírica alcanzada al δ inyectado** (§1.7), medida por simulación repetida en la
-  Fase 4. Además, con un efecto **diluido** (§1.7b) la potencia real es **menor** que la nominal:
-  ese contraste es un resultado del proyecto, no un fallo.
+  Fase 4.
+- **Hipótesis a contrastar en la Fase 4:** que el efecto **diluido** (§1.7b) reduzca la potencia
+  respecto a un efecto uniforme del mismo tamaño medio. Es una predicción razonable —concentrar el
+  efecto en el 20 % infla la varianza del grupo *treatment*—, pero **debe cuantificarse, no
+  asumirse**. (Resultado de la Fase 4: la penalización es **despreciable** aquí, porque la varianza
+  natural del AOV, CV ≈ 1,5, domina; ver `docs/04_modeling.md` §4.2.)
 
 ### Regla de decisión
 
@@ -198,10 +202,12 @@ si R_i = 0:  aov_T_i = aov_C_i                     # sin cambio
   debajo del umbral de envío gratis (efecto más realista de la barra de progreso).
 - El análisis se ejecuta **a ciegas** respecto a `p_resp` y `δ_resp` y debe **recuperar el ATE del
   5 % dentro del IC 95 %**.
-- **Predicción del proyecto:** como el efecto se concentra en el 20 % de la muestra tratada, la
-  **varianza del grupo treatment sube** y la **potencia empírica será menor que la nominal del
-  80 %**. Cuantificar esa brecha —y explicar por qué el power analysis estándar la pasa por alto—
-  es uno de los entregables analíticos de la Fase 5.
+- **Predicción a verificar:** al concentrar el efecto en el 20 % de la muestra tratada sube la
+  varianza del grupo *treatment*, lo que *podría* reducir la potencia respecto a un efecto uniforme.
+  La Fase 4 lo cuantifica por simulación. **Resultado:** el estimador es **insesgado** (media de
+  1.000 réplicas = 5,00 %) y la penalización de potencia por dilución es **< 1 pp** en todo el rango
+  de n — la intuición es correcta en principio pero **irrelevante en magnitud** aquí. Es un
+  hallazgo del proyecto: *verificar* supera a *asumir*.
 
 ### Nota de honestidad metodológica (irá también en el README y el notebook)
 

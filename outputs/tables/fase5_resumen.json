@@ -1,0 +1,182 @@
+{
+  "parametros": {
+    "SEED": 42,
+    "ATE_declarado_pct": 5.0,
+    "MDE_relevancia_pct": 3.0
+  },
+  "1_resultado_primario": {
+    "lift_pct": 5.666,
+    "IC95_lift_pct": [
+      3.994,
+      7.337
+    ],
+    "diff_abs_R$": 7.58,
+    "p_value": 3.09e-11,
+    "log10_p": -10.51,
+    "t_stat": 6.64,
+    "n_control": 47280,
+    "n_treatment": 47423,
+    "significativo": true,
+    "ci_entero_sobre_MDE": true,
+    "relevante": true
+  },
+  "2_impacto_negocio": {
+    "pedidos_validos_ventana_sin_dedup": 97905,
+    "meses_ventana": 20,
+    "pedidos_por_anio_estimado": 58743,
+    "AOV_base_R$": 137.04,
+    "GMV_mercancia_anual_estimado_R$": 8049993,
+    "uplift_GMV_anual_R$": 456084,
+    "uplift_GMV_anual_IC95_R$": [
+      321514,
+      590655
+    ],
+    "uplift_ingreso_marketplace_anual_R$_asumiendo_comision_15pct": 68413,
+    "nota": "GMV = valor de mercancía. El ingreso del marketplace es una comisión (take rate) sobre el GMV; se asume 15% a efectos ilustrativos. Extrapolación lineal del lift por pedido al volumen anual histórico."
+  },
+  "3_ancova": {
+    "sin_ajuste": {
+      "coef_treat_R$": 7.58,
+      "lift_pct": 5.666,
+      "ci95_pct": [
+        3.994,
+        7.337
+      ],
+      "se_R$": 1.1411
+    },
+    "con_ajuste": {
+      "coef_treat_R$": 6.948,
+      "lift_pct": 5.193,
+      "ci95_pct": [
+        3.709,
+        6.677
+      ],
+      "se_R$": 1.013
+    },
+    "reduccion_SE_pct": 11.23
+  },
+  "4_segmentos": {
+    "segmentos_prespecificados": [
+      "cesta",
+      "payment_type",
+      "macro_region",
+      "trimestre",
+      "cat_grupo"
+    ],
+    "test_interaccion": {
+      "cesta": {
+        "p_bruto": 0.9293,
+        "p_BH": 0.9293,
+        "heterogeneidad_significativa_tras_BH": false,
+        "n_por_nivel": {
+          "1 item": 85416,
+          "2+ items": 9287
+        }
+      },
+      "payment_type": {
+        "p_bruto": 0.4112,
+        "p_BH": 0.9293,
+        "heterogeneidad_significativa_tras_BH": false,
+        "n_por_nivel": {
+          "boleto": 18897,
+          "credit_card": 71462,
+          "debit_card": 1468,
+          "voucher": 2876
+        }
+      },
+      "macro_region": {
+        "p_bruto": 0.6235,
+        "p_BH": 0.9293,
+        "heterogeneidad_significativa_tras_BH": false,
+        "n_por_nivel": {
+          "Centro-Oeste": 5532,
+          "Nordeste": 9021,
+          "Norte": 1772,
+          "Sudeste": 64874,
+          "Sur": 13504
+        }
+      },
+      "trimestre": {
+        "p_bruto": 0.8046,
+        "p_BH": 0.9293,
+        "heterogeneidad_significativa_tras_BH": false,
+        "n_por_nivel": {
+          "2017Q1": 5014,
+          "2017Q2": 8969,
+          "2017Q3": 12029,
+          "2017Q4": 17018,
+          "2018Q1": 20240,
+          "2018Q2": 19207,
+          "2018Q3": 12226
+        }
+      },
+      "cat_grupo": {
+        "p_bruto": 0.2643,
+        "p_BH": 0.9293,
+        "heterogeneidad_significativa_tras_BH": false,
+        "n_por_nivel": {
+          "bed_bath_table": 8850,
+          "computers_accessories": 6394,
+          "furniture_decor": 5963,
+          "health_beauty": 8458,
+          "housewares": 5589,
+          "resto": 52140,
+          "sports_leisure": 7309
+        }
+      }
+    },
+    "escala_test": "log(AOV) -> contrasta heterogeneidad del efecto RELATIVO (%), que es la pregunta de negocio; en nivel, el efecto multiplicativo genera heterogeneidad absoluta mecánica en cestas grandes",
+    "veredicto": "ninguna interacción significativa (ni bruta ni tras BH) -> el efecto relativo es HOMOGÉNEO entre segmentos, coherente con el diseño (responders al azar). Buscar 'dónde funciona mejor' sin corrección sería p-hacking."
+  },
+  "5_p_hacking": {
+    "n_cortes_exploratorios": 38,
+    "esperados_por_azar_a_0.05": 1.9,
+    "test_en_NIVEL_(mv_w)": {
+      "nominales_p<0.05": {
+        "n": 4,
+        "cuales": [
+          "categoria:bed_bath_table",
+          "categoria:health_beauty",
+          "flete_q:q1",
+          "flete_q:q4"
+        ]
+      },
+      "tras_BH": {
+        "n": 1,
+        "cuales": [
+          "flete_q:q4"
+        ]
+      },
+      "tras_Bonferroni": 1
+    },
+    "test_en_LOG_(efecto_relativo)": {
+      "nominales_p<0.05": {
+        "n": 1,
+        "cuales": [
+          "categoria:health_beauty"
+        ]
+      },
+      "tras_BH": {
+        "n": 0,
+        "cuales": []
+      },
+      "tras_Bonferroni": 0
+    },
+    "leccion": "(1) En NIVEL aparecen 'segmentos donde el efecto es distinto' concentrados en cortes correlacionados con el tamaño de cesta (flete alto/bajo): son un ARTEFACTO MECÁNICO del efecto multiplicativo, no heterogeneidad real. (2) En LOG (el efecto relativo, que es la pregunta de negocio) no queda casi nada, y lo poco que hay no sobrevive a BH/Bonferroni. Moraleja: testar la magnitud correcta (% , no R$ absolutos), pre-especificar segmentos y corregir por multiplicidad."
+  },
+  "6_decision": {
+    "decision": "LANZAR",
+    "justificacion": [
+      "Efecto primario +5.67% (IC95 [3.99, 7.34]), log10(p) = -10.51 -> muy significativo.",
+      "IC 95 % completamente por encima del MDE de relevancia (+3.0%) -> relevante para negocio.",
+      "Ningún guardrail degradado (Fase 4, Benjamini-Hochberg).",
+      "Efecto homogéneo entre segmentos pre-especificados (sin interacción tras BH).",
+      "Estimación ajustada por covariables (ANCOVA): +5.193% con SE 11.23% menor.",
+      "Impacto estimado: +R$ 456,084/año de GMV de mercancía (IC [321,514, 590,655])."
+    ],
+    "caveats": [
+      "El efecto es sintético y declarado: esta 'decisión' valida el proceso, no un hallazgo real.",
+      "El estimador puntual (+5,7%) supera el ATE inyectado (+5%) por el desbalance basal del split (+1,2%, no significativo); el IC lo cubre."
+    ]
+  }
+}

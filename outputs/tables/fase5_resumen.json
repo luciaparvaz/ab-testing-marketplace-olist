@@ -65,8 +65,8 @@
     ],
     "test_interaccion": {
       "cesta": {
-        "p_bruto": 0.9293,
-        "p_BH": 0.9293,
+        "p_bruto": 0.9242,
+        "p_BH": 0.9242,
         "heterogeneidad_significativa_tras_BH": false,
         "n_por_nivel": {
           "1 item": 85416,
@@ -74,8 +74,8 @@
         }
       },
       "payment_type": {
-        "p_bruto": 0.4112,
-        "p_BH": 0.9293,
+        "p_bruto": 0.3766,
+        "p_BH": 0.9242,
         "heterogeneidad_significativa_tras_BH": false,
         "n_por_nivel": {
           "boleto": 18897,
@@ -85,8 +85,8 @@
         }
       },
       "macro_region": {
-        "p_bruto": 0.6235,
-        "p_BH": 0.9293,
+        "p_bruto": 0.6801,
+        "p_BH": 0.9242,
         "heterogeneidad_significativa_tras_BH": false,
         "n_por_nivel": {
           "Centro-Oeste": 5532,
@@ -97,8 +97,8 @@
         }
       },
       "trimestre": {
-        "p_bruto": 0.8046,
-        "p_BH": 0.9293,
+        "p_bruto": 0.7942,
+        "p_BH": 0.9242,
         "heterogeneidad_significativa_tras_BH": false,
         "n_por_nivel": {
           "2017Q1": 5014,
@@ -111,8 +111,8 @@
         }
       },
       "cat_grupo": {
-        "p_bruto": 0.2643,
-        "p_BH": 0.9293,
+        "p_bruto": 0.1353,
+        "p_BH": 0.6764,
         "heterogeneidad_significativa_tras_BH": false,
         "n_por_nivel": {
           "bed_bath_table": 8850,
@@ -125,34 +125,39 @@
         }
       }
     },
-    "escala_test": "log(AOV) -> contrasta heterogeneidad del efecto RELATIVO (%), que es la pregunta de negocio; en nivel, el efecto multiplicativo genera heterogeneidad absoluta mecánica en cestas grandes",
+    "escala_test": "log(AOV), Wald HC3 -> contrasta heterogeneidad del efecto RELATIVO (%), robusto a la heterocedasticidad entre grupos; en nivel el efecto multiplicativo genera heterogeneidad absoluta mecánica en cestas grandes",
     "veredicto": "ninguna interacción significativa (ni bruta ni tras BH) -> el efecto relativo es HOMOGÉNEO entre segmentos, coherente con el diseño (responders al azar). Buscar 'dónde funciona mejor' sin corrección sería p-hacking."
   },
   "5_p_hacking": {
     "n_cortes_exploratorios": 38,
     "esperados_por_azar_a_0.05": 1.9,
+    "test": "interacción treat x corte, Wald HC3",
     "test_en_NIVEL_(mv_w)": {
       "nominales_p<0.05": {
-        "n": 4,
+        "n": 5,
         "cuales": [
           "categoria:bed_bath_table",
           "categoria:health_beauty",
           "flete_q:q1",
+          "flete_q:q2",
           "flete_q:q4"
         ]
       },
       "tras_BH": {
-        "n": 1,
+        "n": 3,
         "cuales": [
+          "categoria:bed_bath_table",
+          "flete_q:q1",
           "flete_q:q4"
         ]
       },
-      "tras_Bonferroni": 1
+      "tras_Bonferroni": 2
     },
     "test_en_LOG_(efecto_relativo)": {
       "nominales_p<0.05": {
-        "n": 1,
+        "n": 2,
         "cuales": [
+          "categoria:bed_bath_table",
           "categoria:health_beauty"
         ]
       },
@@ -162,7 +167,7 @@
       },
       "tras_Bonferroni": 0
     },
-    "leccion": "(1) En NIVEL aparecen 'segmentos donde el efecto es distinto' concentrados en cortes correlacionados con el tamaño de cesta (flete alto/bajo): son un ARTEFACTO MECÁNICO del efecto multiplicativo, no heterogeneidad real. (2) En LOG (el efecto relativo, que es la pregunta de negocio) no queda casi nada, y lo poco que hay no sobrevive a BH/Bonferroni. Moraleja: testar la magnitud correcta (% , no R$ absolutos), pre-especificar segmentos y corregir por multiplicidad."
+    "leccion": "(1) En NIVEL varios 'segmentos donde el efecto es distinto' sobreviven incluso a BH y a Bonferroni: NO son casualidad, son un ARTEFACTO MECÁNICO del efecto multiplicativo (el lift en R$ es mayor en cestas grandes), concentrado en los cortes correlacionados con el tamaño (cuartiles de flete). (2) En LOG (el efecto relativo, que es la pregunta de negocio) solo quedan hallazgos nominales de nivel-azar, y NINGUNO sobrevive a la corrección. Moraleja: (a) testar la magnitud correcta (%, no R$ absolutos), (b) pre-especificar segmentos, (c) corregir por multiplicidad. Corregir no basta si el estimando está mal."
   },
   "6_decision": {
     "decision": "LANZAR",

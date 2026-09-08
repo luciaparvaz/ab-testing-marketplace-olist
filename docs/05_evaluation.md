@@ -74,15 +74,19 @@ del ruido residual. Es la técnica estándar (CUPED / regresión) para ganar pre
 > deja degenerado (n_recurrente ≈ 40) y la recompra en Olist es ~3 % (Fase 2 §2.7). Se analizaría
 > sobre la tabla de robustez con todos los pedidos.
 
-### Test de interacción `treatment × segmento` sobre **log(AOV)** (efecto relativo)
+### Test de interacción `treatment × segmento` sobre **log(AOV)**, Wald **HC3** (efecto relativo)
+
+> HC3 (SE robustas a heterocedasticidad): necesario porque bajo H1 las varianzas de grupo difieren
+> (Fase 4; auditoría Fase 5 §A2). El F-test homocedástico daría p ligeramente distintos sin cambiar
+> la conclusión.
 
 | Segmento | p bruto | p ajustado (BH) | ¿Heterogéneo? |
 |---|---:|---:|:--:|
-| cesta | 0,93 | 0,93 | ❌ |
-| payment_type | 0,41 | 0,93 | ❌ |
-| macro_region | 0,62 | 0,93 | ❌ |
-| trimestre | 0,80 | 0,93 | ❌ |
-| cat_grupo | 0,26 | 0,93 | ❌ |
+| cesta | 0,92 | 0,92 | ❌ |
+| payment_type | 0,38 | 0,92 | ❌ |
+| macro_region | 0,68 | 0,92 | ❌ |
+| trimestre | 0,79 | 0,92 | ❌ |
+| cat_grupo | 0,14 | 0,68 | ❌ |
 
 **Ninguna interacción significativa.** El efecto **relativo** es homogéneo entre segmentos, coherente
 con el diseño (los respondedores se sortean al azar). En el *forest plot* (`f5_01`) un par de
@@ -102,20 +106,22 @@ corrección** (§5.5).
 ## 5.5 El riesgo de p-hacking — demostrado
 
 Se prueban **38 cortes exploratorios arbitrarios** (estados sueltos, categorías sueltas, cuartiles
-de flete, trimestres). Esperados por puro azar a α = 0,05: **≈ 1,9**.
+de flete, trimestres). Test: interacción `treat × corte`, Wald **HC3**. Esperados por puro azar a
+α = 0,05: **≈ 1,9**.
 
 | Escala del test | Nominales p < 0,05 | Tras BH (FDR) | Tras Bonferroni |
 |---|---:|---:|---:|
-| **Nivel (R$)** | 4 (2 en cuartiles de flete) | 1 (`flete_q:q4`) | 1 |
-| **Log (efecto relativo, %)** | 1 | **0** | **0** |
+| **Nivel (R$)** | **5** (3 en cuartiles de flete) | **3** (`flete_q1`, `flete_q4`, `bed_bath_table`) | **2** |
+| **Log (efecto relativo, %)** | 2 | **0** | **0** |
 
 **Lecciones:**
-1. En **nivel**, los "segmentos donde el efecto es distinto" se concentran en cortes correlacionados
-   con el tamaño de cesta (flete alto/bajo). Es un **artefacto mecánico** del efecto multiplicativo,
-   no heterogeneidad real — y uno de ellos **sobrevive incluso a Bonferroni**.
-2. En **log** (la magnitud correcta: el %), no queda casi nada y nada sobrevive a la corrección.
-3. → **Testar la magnitud correcta, pre-especificar los segmentos y corregir por multiplicidad.**
-   El slicing exploratorio sin corrección fabrica hallazgos.
+1. En **nivel**, varios "segmentos donde el efecto es distinto" **sobreviven incluso a Bonferroni**.
+   No son casualidad: son un **artefacto mecánico** del efecto multiplicativo (el lift en R$ es mayor
+   en cestas grandes), concentrado en los cortes correlacionados con el tamaño (cuartiles de flete).
+2. En **log** (la magnitud correcta: el %), solo quedan hallazgos nominales de nivel-azar y
+   **ninguno sobrevive** a BH ni a Bonferroni.
+3. → **(a)** testar la magnitud correcta (%, no R$ absolutos); **(b)** pre-especificar los segmentos;
+   **(c)** corregir por multiplicidad. **Corregir no basta si el estimando está mal planteado.**
 
 ---
 

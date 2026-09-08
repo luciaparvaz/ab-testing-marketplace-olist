@@ -78,13 +78,15 @@ def main():
     for yrs, col in zip((1, 2, 3), ("#c1121f", "#3b6ea5", "#2a9d8f")):
         ax.plot(vols, [breakeven_lift(v, years=yrs) * 100 for v in vols], color=col,
                 label=f"payback {yrs} año(s)")
-    ax.axhline(3.0, color="#666", ls="--", lw=1, label="MDE asumido (+3%)")
+    ax.axhline(3.0, color="#666", ls="--", lw=1, label="MDE usado (+3%)")
     ax.axvline(58_700, color="#999", ls=":", lw=1)
-    ax.annotate("volumen del dataset", (58_700, 40), fontsize=7, rotation=90, va="bottom")
+    ax.axvline(415_000, color="#2a9d8f", ls=":", lw=1)
     ax.set_xscale("log"); ax.set_yscale("log")
     ax.set_xlabel("pedidos / año"); ax.set_ylabel("MDE break-even (%)")
-    ax.set_title("MDE de relevancia derivado de costes: cae con el volumen de pedidos")
-    ax.legend(fontsize=8)
+    ax.set_title("MDE de relevancia derivado de costes\n"
+                 "el +3% es break-even a partir de ~415k pedidos/año  ·  a la escala del dataset "
+                 "(~59k) sería ~+21%", fontsize=9)
+    ax.legend(fontsize=8, loc="lower left")
     fig.tight_layout()
     fig.savefig(FIG / "f_mde_breakeven.png", dpi=130)
     print(f"\nfigura -> {FIG / 'f_mde_breakeven.png'}")

@@ -62,66 +62,59 @@ Es el trabajo que hace un equipo de experimentación de producto.
 ## Estructura del repositorio
 
 ```
+├── params.yaml                  # ÚNICA fuente de verdad para los parámetros (seed, alpha, efecto…)
+├── run_all.py                   # ÚNICO entrypoint: corre las 6 fases + informe de reproducibilidad
 ├── data/
 │   ├── raw/                     # 9 CSV de Olist (no versionados — ver "Reproducir")
 │   └── processed/               # tabla analítica (regenerable)
 ├── src/
+│   ├── config.py                # carga params.yaml + rutas absolutas; nadie más define constantes
+│   ├── effect_model.py          # inject_diluted_effect (compartido, sin efectos secundarios)
 │   ├── profiling_fase2.py       # Fase 2 — perfilado
+│   ├── figures_fase2.py         # Fase 2 — figuras
 │   ├── prepare_data.py          # Fase 3 — tabla analítica + asignación simulada
 │   ├── balance_check.py         # Fase 3 — covariate balance check + SRM
-│   ├── modeling.py              # Fase 4 — power, supuestos, A/A, A/B, guardrails, multi-semilla…
 │   ├── mde_cost_model.py        # Fase 4 — MDE de relevancia derivado de un break-even
+│   ├── modeling.py              # Fase 4 — power, supuestos, A/A, A/B, guardrails, multi-semilla…
 │   └── evaluation.py            # Fase 5 — decisión, segmentos, p-hacking
+├── tests/                       # pytest: config, effect_model, invariantes de los resultados
 ├── notebooks/
-│   ├── ab_test_olist.ipynb      # notebook narrativo reproducible (ejecutado)
+│   ├── ab_test_olist.ipynb      # notebook de PRESENTACIÓN (solo lee outputs/, no calcula)
 │   └── ab_test_olist.py         # fuente jupytext (control de versiones)
-├── outputs/
-│   ├── figures/                 # f2_*, f3_*, f4_*, f5_*, f_mde_breakeven
-│   └── tables/                  # fase{2..5}_resumen.json, transformaciones, balance, srm, segmentos, mde
-├── docs/
-│   ├── 01_business_understanding.md … 06_deployment.md
-│   ├── auditoria_fase1_fase2.md · auditoria_fase5.md · auditoria_global.md
-│   ├── resumen_ejecutivo.md
-│   └── linkedin_post.md
-└── requirements.txt
+├── outputs/{figures,tables}/    # figuras + JSON/CSV de resultados (regenerables)
+├── docs/                        # 01..06 por fase · 3 auditorías · resumen ejecutivo · post LinkedIn
+├── requirements.txt · pytest.ini · LICENSE
 ```
 
 ---
 
 ## Reproducir
 
-**1. Entorno**
-
 ```bash
 pip install -r requirements.txt
-```
 
-**2. Datos** (no versionados por la licencia CC BY-NC-SA 4.0)
-
-```bash
-# opción A — kaggle CLI (requiere token en ~/.kaggle/)
+# datos (no versionados por la licencia CC BY-NC-SA 4.0)
 python -m kaggle datasets download -d olistbr/brazilian-ecommerce -p data/raw --unzip
+#   (o descarga manual desde kaggle.com/datasets/olistbr/brazilian-ecommerce -> data/raw/)
 
-# opción B — descarga manual desde
-# https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
-# y descomprimir los 9 CSV en data/raw/
+python run_all.py        # ~2 min · corre las 6 fases y VERIFICA los invariantes clave
+pytest                   # tests rápidos (config + efecto + invariantes de resultados)
+pytest -m slow           # además: re-ejecuta y comprueba idempotencia bit a bit
 ```
 
-**3. Pipeline completo**
+`run_all.py` termina con un **informe de reproducibilidad** que comprueba, entre otros:
+decisión == LANZAR, tasa de falsos positivos del A/A en [3,5 %; 6,5 %], IC del A/B por encima del
+MDE, sin SRM, ningún guardrail degradado — y **sale con código ≠ 0** si algo no cuadra.
 
-```bash
-python src/profiling_fase2.py      # Fase 2
-python src/prepare_data.py         # Fase 3 — genera data/processed/analytical_table.parquet
-python src/balance_check.py        # Fase 3 — balance + SRM
-python src/mde_cost_model.py       # Fase 4 — MDE break-even
-python src/modeling.py             # Fase 4  (~3-4 min: simulaciones con semilla fija)
-python src/evaluation.py           # Fase 5
+### Diseño reproducible
 
-# o el notebook completo de una vez (~6 min):
-jupyter nbconvert --to notebook --execute --inplace notebooks/ab_test_olist.ipynb
-```
-
-Todas las semillas están fijadas (`SEED = 42`); los resultados son reproducibles bit a bit.
+- **Un solo parámetro que tocar:** todo vive en `params.yaml`, cargado por `src/config.py`. Ningún
+  otro módulo define `SEED`, `ALPHA`, la ventana temporal, etc. (hay un test que lo verifica).
+- **Un solo entrypoint:** `run_all.py` ejecuta las fases en orden de dependencia y falla si una no
+  genera sus salidas.
+- **Sin rutas de ejecución paralelas:** el notebook **solo lee** `outputs/`; no recalcula nada.
+- **Rutas absolutas:** funciona desde cualquier directorio de trabajo.
+- Semillas fijas → resultado determinista (`pytest -m slow` comprueba idempotencia bit a bit).
 
 ---
 

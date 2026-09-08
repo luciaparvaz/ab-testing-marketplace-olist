@@ -1,0 +1,38 @@
+# Parámetros del experimento simulado y del análisis.
+# ÚNICA fuente de verdad — editar aquí, nunca en el código.
+# Cargado por src/config.py; usado por todos los scripts y el notebook.
+
+seed: 42
+alpha: 0.05                 # nivel de significación, test bilateral
+
+# --- Efecto de tratamiento sintético (modelo diluido, docs/01 §1.7b) ---
+effect:
+  p_resp: 0.20              # fracción de tratados que responden al rediseño
+  delta_resp: 0.25          # efecto multiplicativo entre respondedores (+25 %)
+  eps_sd: 0.05              # ruido gaussiano sobre el efecto de cada respondedor
+  # ATE (efecto medio) = p_resp * delta_resp = 0.05  -> se calcula en config.py
+
+# --- Criterio de decisión de negocio ---
+mde_relevancia_pct: 3.0    # lift mínimo de AOV que justifica el coste (ver cost_model)
+target_power: 0.80
+
+# --- Preparación de datos (Fase 3) ---
+window_start: "2017-01-01"
+window_end: "2018-09-01"   # exclusivo -> incluye hasta 2018-08-31
+valid_status: [delivered, shipped, invoiced, approved, processing]
+winsor_q: 0.995            # winsorización de la métrica primaria SOLO para el contraste
+
+# --- Simulaciones (todas con semilla fija -> reproducibles bit a bit) ---
+n_sim_aa: 2000             # particiones A/A para la calibración
+n_sim_power: 1000          # réplicas del power analysis simulado
+n_sim_multiseed: 500       # réplicas del A/B completo (cobertura del IC)
+n_bootstrap: 10000
+
+# --- Modelo de costes para derivar el MDE de relevancia (ilustrativo) ---
+cost_model:
+  aov_base: 137.0
+  commission: 0.15                 # take rate del marketplace sobre el GMV
+  net_margin_on_commission: 0.80
+  build_cost: 250000               # R$, coste único de construir
+  maint_cost_year: 80000           # R$/año
+  payback_years: 2

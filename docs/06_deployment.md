@@ -8,21 +8,32 @@ audiencias. Entregables:
 | Entregable | Fichero | Audiencia |
 |---|---|---|
 | **Resumen ejecutivo (1 página)** | `docs/resumen_ejecutivo.md` | Stakeholder no técnico (Product Lead, dirección) |
-| **Notebook reproducible con narrativa** | `notebooks/ab_test_olist.ipynb` (+ fuente `.py` jupytext) | Revisor técnico / reclutador de Data |
+| **Notebook de presentación** | `notebooks/ab_test_olist.ipynb` (+ fuente `.py` jupytext) | Revisor técnico / reclutador de Data |
 | **README del repositorio** | `README.md` | Visitante de GitHub |
 | **Borrador de post de LinkedIn** | `docs/linkedin_post.md` | Red profesional |
 | **Documentación por fase + auditorías** | `docs/0X_*.md`, `docs/auditoria_*.md` | Traza completa del razonamiento |
 
 ## Reproducibilidad
 
-- Todas las semillas fijadas (`SEED = 42`); resultados deterministas.
-- El notebook se ejecuta de punta a punta con
-  `jupyter nbconvert --to notebook --execute --inplace notebooks/ab_test_olist.ipynb`
-  (~1 min) y regenera todas las figuras y tablas.
-- Los CSV crudos de Olist **no se versionan** (licencia CC BY-NC-SA 4.0); el README explica cómo
-  obtenerlos.
-- `notebooks/ab_test_olist.py` (formato jupytext *percent*) es la fuente versionable del notebook,
-  apta para *diff* y *code review*.
+Refactorizada tras la revisión del usuario ("no es reproducible si está todo en un notebook"):
+
+- **Única fuente de verdad de los parámetros:** `params.yaml`, cargado por `src/config.py`. Ningún
+  otro módulo define `SEED`, `ALPHA`, la ventana temporal, el modelo de costes, etc. (`tests/
+  test_config.py` lo verifica con un análisis del AST).
+- **Único entrypoint:** `python run_all.py` corre las 6 fases en orden de dependencia, comprueba que
+  cada una genera sus salidas y termina con un **informe de reproducibilidad** (decisión == LANZAR,
+  A/A ~5 %, IC del A/B sobre el MDE, sin SRM, guardrails intactos, …). Sale con código ≠ 0 si algo
+  no cuadra. ~2 min.
+- **Sin rutas de ejecución paralelas:** el notebook `ab_test_olist.ipynb` **solo lee** `outputs/` y
+  muestra figuras + narrativa; no recalcula nada. Antes tenía una segunda ruta de cálculo (llamaba a
+  `modeling.main()` etc.), que era la crítica válida.
+- **`inject_diluted_effect`** vive en `src/effect_model.py` (sin efectos secundarios al importar);
+  antes `evaluation.py` lo importaba de `modeling.py`, acoplando las fases.
+- **Rutas absolutas** derivadas de la ubicación del repo → funciona desde cualquier CWD.
+- **Tests:** `pytest` (rápidos: config, efecto sintético, invariantes de los resultados) y
+  `pytest -m slow` (re-ejecuta `modeling.main()` dos veces y comprueba que el JSON es idéntico).
+- Los CSV crudos de Olist **no se versionan** (licencia CC BY-NC-SA 4.0).
+- `notebooks/ab_test_olist.py` (jupytext *percent*) es la fuente versionable del notebook.
 
 ## Recomendación de comunicación (LinkedIn)
 

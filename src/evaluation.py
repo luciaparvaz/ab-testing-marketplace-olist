@@ -15,13 +15,7 @@ Salida: outputs/tables/fase5_*.csv/json · outputs/figures/f5_*.png
 
 from __future__ import annotations
 
-try:
-    import sys as _sys; _sys.stdout.reconfigure(encoding="utf-8")
-except Exception:
-    pass
-
 import json
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -29,6 +23,10 @@ from scipy import stats
 from statsmodels.regression.linear_model import OLS
 from statsmodels.stats.multitest import multipletests
 import matplotlib.pyplot as plt
+
+from config import (ALPHA, ANALYTICAL_TABLE, ATE, MDE_RELEVANCIA, OUT_FIGURES as FIG,
+                    OUT_TABLES as OUT_T, RAW, SEED, WINDOW_END, WINDOW_START, apply_plot_style)
+from effect_model import inject_diluted_effect
 
 
 def _design(df: pd.DataFrame, cols: list[str], cat_cols: list[str]) -> pd.DataFrame:
@@ -62,14 +60,8 @@ def interaction_wald_hc3(y: np.ndarray, treat: np.ndarray, seg_dummies: np.ndarr
         R[i, X.shape[1] - k + i] = 1.0
     return float(res.wald_test(R, scalar=True).pvalue)
 
-from modeling import inject_diluted_effect, SEED, ALPHA, ATE, MDE_RELEVANCIA
 
-RAW = Path("data/raw")
-PROC = Path("data/processed")
-OUT_T = Path("outputs/tables")
-FIG = Path("outputs/figures")
-plt.rcParams.update({"figure.dpi": 110, "savefig.dpi": 130, "font.size": 10,
-                     "axes.spines.top": False, "axes.spines.right": False})
+apply_plot_style()
 
 # Segmentos PRE-ESPECIFICADOS (declarados ANTES de mirar resultados por segmento).
 # "nuevo vs recurrente" NO está: la dedup a 1 pedido/cliente lo deja degenerado (n_recurrente≈40);
@@ -88,7 +80,7 @@ MACRO_REGION = {
 
 
 def load_with_effect() -> pd.DataFrame:
-    df = pd.read_parquet(PROC / "analytical_table.parquet").copy()
+    df = pd.read_parquet(ANALYTICAL_TABLE).copy()
     is_t = (df.group == "treatment").values
     rng = np.random.default_rng(SEED)
     df["mv"] = inject_diluted_effect(df["merch_value"].values, is_t, rng)
@@ -132,11 +124,11 @@ def main():
     # porque el rediseño aplicaría a todos los pedidos, no solo a los primeros de cada cliente.
     orders_full = pd.read_csv(RAW / "olist_orders_dataset.csv", parse_dates=["order_purchase_timestamp"])
     items_full = pd.read_csv(RAW / "olist_order_items_dataset.csv")
-    mw = (orders_full.order_purchase_timestamp >= "2017-01-01") & \
-         (orders_full.order_purchase_timestamp < "2018-09-01")
+    mw = (orders_full.order_purchase_timestamp >= WINDOW_START) & \
+         (orders_full.order_purchase_timestamp < WINDOW_END)
     valid_ids = set(items_full.order_id)
-    n_orders_window = int(((orders_full[mw].order_status.isin(
-        ["delivered", "shipped", "invoiced", "approved", "processing"])) &
+    from config import VALID_STATUS
+    n_orders_window = int(((orders_full[mw].order_status.isin(VALID_STATUS)) &
         (orders_full[mw].order_id.isin(valid_ids))).sum())
     n_orders_year = n_orders_window / 20 * 12
     base_aov = df.loc[~is_t, "merch_value"].mean()
@@ -153,7 +145,8 @@ def main():
         "ci_entero_sobre_MDE": bool(prim["ci_lo"] > MDE_RELEVANCIA),
         "relevante": bool(prim["p"] < ALPHA and prim["ci_lo"] > MDE_RELEVANCIA),
     }
-    COMMISSION = 0.15  # take rate asumida del marketplace
+    from config import COST_MODEL
+    COMMISSION = COST_MODEL["commission"]  # take rate asumida del marketplace
     out["2_impacto_negocio"] = {
         "pedidos_validos_ventana_sin_dedup": n_orders_window, "meses_ventana": 20,
         "pedidos_por_anio_estimado": round(n_orders_year),

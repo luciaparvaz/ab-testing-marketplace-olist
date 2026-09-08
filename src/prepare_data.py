@@ -16,26 +16,11 @@ Salida:
 
 from __future__ import annotations
 
-try:
-    import sys as _sys; _sys.stdout.reconfigure(encoding="utf-8")
-except Exception:
-    pass
-
-from pathlib import Path
 import numpy as np
 import pandas as pd
 
-RAW = Path("data/raw")
-PROC = Path("data/processed")
-OUT_T = Path("outputs/tables")
-PROC.mkdir(parents=True, exist_ok=True)
-OUT_T.mkdir(parents=True, exist_ok=True)
-
-SEED = 42
-WINDOW_START = "2017-01-01"
-WINDOW_END = "2018-09-01"          # exclusivo -> incluye hasta 2018-08-31
-VALID_STATUS = {"delivered", "shipped", "invoiced", "approved", "processing"}
-WINSOR_Q = 0.995
+from config import (ANALYTICAL_TABLE, OUT_TABLES as OUT_T, RAW, SEED, VALID_STATUS,
+                    WINDOW_END, WINDOW_START, WINSOR_Q)
 
 _LOG: list[dict] = []
 
@@ -151,7 +136,7 @@ def main():
             "n_items", "merch_value", "merch_value_w", "freight_value", "review_score", "group"]
     tab = orders[keep].copy()
 
-    out_path = PROC / "analytical_table.parquet"
+    out_path = ANALYTICAL_TABLE
     tab.to_parquet(out_path, index=False)
     pd.DataFrame(_LOG).to_csv(OUT_T / "fase3_transformaciones.csv", index=False)
 

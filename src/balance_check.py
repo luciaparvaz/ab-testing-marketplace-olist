@@ -11,21 +11,12 @@ Salida: outputs/tables/fase3_balance.csv  +  outputs/figures/f3_01_balance.png
 
 from __future__ import annotations
 
-try:
-    import sys as _sys; _sys.stdout.reconfigure(encoding="utf-8")
-except Exception:
-    pass
-
-from pathlib import Path
 import numpy as np
 import pandas as pd
 from scipy import stats
 import matplotlib.pyplot as plt
 
-PROC = Path("data/processed")
-OUT_T = Path("outputs/tables")
-FIG = Path("outputs/figures")
-FIG.mkdir(parents=True, exist_ok=True)
+from config import ANALYTICAL_TABLE, OUT_FIGURES as FIG, OUT_TABLES as OUT_T
 
 CAT_COVARS = ["customer_state", "cat_dominante", "payment_type", "mes_compra"]
 NUM_COVARS = ["n_items", "freight_value"]
@@ -43,7 +34,7 @@ def smd_binary(p1: float, p2: float) -> float:
 
 
 def main():
-    df = pd.read_parquet(PROC / "analytical_table.parquet")
+    df = pd.read_parquet(ANALYTICAL_TABLE)
     c = df[df.group == "control"]
     t = df[df.group == "treatment"]
     rows = []

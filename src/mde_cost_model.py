@@ -11,26 +11,19 @@ Salida: outputs/tables/mde_cost_model.csv  +  outputs/figures/f_mde_breakeven.pn
 
 from __future__ import annotations
 
-try:
-    import sys as _sys; _sys.stdout.reconfigure(encoding="utf-8")
-except Exception:
-    pass
-
-from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-OUT_T = Path("outputs/tables")
-FIG = Path("outputs/figures")
+from config import COST_MODEL, OUT_FIGURES as FIG, OUT_TABLES as OUT_T
 
-# ---- asunciones declaradas (ilustrativas) ---------------------------------
-AOV_BASE = 137.0                 # R$, de la Fase 2
-COMMISSION = 0.15                # take rate del marketplace sobre el GMV
-NET_MARGIN_ON_COMMISSION = 0.80  # tras procesamiento de pago y soporte -> margen neto sobre la comisión
-BUILD_COST = 250_000             # R$, coste único de construir (motor de reco + UI + QA)
-MAINT_COST_YEAR = 80_000         # R$/año, infraestructura + reentrenamiento + mantenimiento
-PAYBACK_YEARS = 2                # horizonte en el que el cambio debe amortizarse
+# ---- asunciones declaradas (de params.yaml -> config.COST_MODEL) ---------
+AOV_BASE = COST_MODEL["aov_base"]
+COMMISSION = COST_MODEL["commission"]
+NET_MARGIN_ON_COMMISSION = COST_MODEL["net_margin_on_commission"]
+BUILD_COST = COST_MODEL["build_cost"]
+MAINT_COST_YEAR = COST_MODEL["maint_cost_year"]
+PAYBACK_YEARS = COST_MODEL["payback_years"]
 
 # volumen anual de pedidos: rango. El dataset da ~58.700; un marketplace mediano-grande, mucho más.
 VOLUME_GRID = [58_700, 250_000, 1_000_000, 5_000_000, 20_000_000]

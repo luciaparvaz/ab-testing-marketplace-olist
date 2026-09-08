@@ -1,0 +1,306 @@
+{
+  "parametros": {
+    "SEED": 42,
+    "ALPHA": 0.05,
+    "P_RESP": 0.2,
+    "DELTA_RESP": 0.25,
+    "EPS_SD": 0.05,
+    "ATE_pct": 5.0,
+    "N_SIM_AA": 2000,
+    "N_SIM_POWER": 1000,
+    "N_BOOT": 10000
+  },
+  "1_power_analysis": {
+    "n_control": 47280,
+    "n_treatment": 47423,
+    "crudo": {
+      "mean": 137.85,
+      "sd": 211.03,
+      "cv": 1.5308,
+      "mde_rel_detectable_80pct_pct": 2.789,
+      "power_efecto_uniforme_+5pct": 0.9989,
+      "power_efecto_diluido_+5pct_ATE": 1.0,
+      "lift_medio_estimado_sim_pct": 4.999,
+      "sesgo_estimador_pp": -0.001,
+      "penalizacion_potencia_por_dilucion_pp": -0.11
+    },
+    "winsor_p99.5": {
+      "mean": 134.49,
+      "sd": 172.42,
+      "cv": 1.2821,
+      "mde_rel_detectable_80pct_pct": 2.336,
+      "power_efecto_uniforme_+5pct": 1.0,
+      "power_efecto_diluido_+5pct_ATE": 1.0,
+      "lift_medio_estimado_sim_pct": 5.006,
+      "sesgo_estimador_pp": 0.006,
+      "penalizacion_potencia_por_dilucion_pp": -0.0
+    },
+    "curva_potencia_vs_n": {
+      "n_por_grupo": [
+        400,
+        800,
+        1600,
+        3200,
+        6400,
+        12800,
+        25600,
+        47280
+      ],
+      "power_uniforme": [
+        0.0747,
+        0.1001,
+        0.152,
+        0.2572,
+        0.4553,
+        0.7431,
+        0.9586,
+        0.9989
+      ],
+      "power_diluido": [
+        0.108,
+        0.094,
+        0.152,
+        0.25,
+        0.442,
+        0.738,
+        0.958,
+        1.0
+      ],
+      "penalizacion_pp": [
+        -3.33,
+        0.61,
+        -0.0,
+        0.72,
+        1.33,
+        0.51,
+        0.06,
+        -0.11
+      ]
+    }
+  },
+  "2_supuestos": {
+    "normalidad_datos_brutos": {
+      "DAgostino_K2": 5452.6,
+      "p": 0.0,
+      "veredicto": "no normal (esperado)"
+    },
+    "normalidad_de_la_media_bootstrap": {
+      "DAgostino_K2": 0.383,
+      "p": 0.8259,
+      "veredicto": "compatible con normal -> Welch-t válido"
+    },
+    "homocedasticidad_sin_efecto": {
+      "Levene_stat": 1.608,
+      "p": 0.2048,
+      "veredicto": "varianzas iguales (esperado en A/A)"
+    },
+    "homocedasticidad_con_efecto_diluido": {
+      "Levene_stat": 22.97,
+      "p": 1.64e-06,
+      "veredicto": "el efecto diluido INFLA la varianza del treatment -> usar Welch, NO Student"
+    },
+    "independencia": "por diseño: asignación aleatoria + dedup a 1 pedido/cliente elimina correlación intra-cliente. SUTVA asumido (sin interferencia entre clientes)."
+  },
+  "3_aa_calibracion": {
+    "merch_value": {
+      "tasa_falsos_positivos_alpha_0.05": 0.0495,
+      "tasa_esperada": 0.05,
+      "IC95_tasa": [
+        0.0399,
+        0.0591
+      ],
+      "IC95_contiene_0.05": true,
+      "KS_vs_uniforme_stat": 0.018,
+      "KS_vs_uniforme_p": 0.5273,
+      "veredicto": "calibrado"
+    },
+    "merch_value_w": {
+      "tasa_falsos_positivos_alpha_0.05": 0.05,
+      "tasa_esperada": 0.05,
+      "IC95_tasa": [
+        0.0404,
+        0.0596
+      ],
+      "IC95_contiene_0.05": true,
+      "KS_vs_uniforme_stat": 0.012,
+      "KS_vs_uniforme_p": 0.9331,
+      "veredicto": "calibrado"
+    },
+    "log_merch": {
+      "tasa_falsos_positivos_alpha_0.05": 0.05,
+      "tasa_esperada": 0.05,
+      "IC95_tasa": [
+        0.0404,
+        0.0596
+      ],
+      "IC95_contiene_0.05": true,
+      "KS_vs_uniforme_stat": 0.0154,
+      "KS_vs_uniforme_p": 0.7245,
+      "veredicto": "calibrado"
+    }
+  },
+  "4_ab_test": {
+    "n_control": 47280,
+    "n_treatment": 47423,
+    "ATE_declarado_pct": 5.0,
+    "primario": {
+      "Welch_crudo": {
+        "control": 137.04,
+        "treatment": 145.41,
+        "diff_abs_R$": 8.37,
+        "lift_rel_pct": 6.111,
+        "IC95_lift_pct": [
+          4.091,
+          8.131
+        ],
+        "p_value": 3.057e-09,
+        "welch_df": 94419.0,
+        "ATE_5pct_en_IC": true
+      },
+      "Welch_winsor_p99.5": {
+        "control": 133.79,
+        "treatment": 141.37,
+        "diff_abs_R$": 7.58,
+        "lift_rel_pct": 5.666,
+        "IC95_lift_pct": [
+          3.994,
+          7.337
+        ],
+        "p_value": 3.095e-11,
+        "welch_df": 94405.0,
+        "ATE_5pct_en_IC": true
+      },
+      "log_geom_ratio": {
+        "lift_geom_pct": 4.788,
+        "p_value": 1.389e-14,
+        "nota": "cociente de medias geométricas (~mediana), NO el AOV"
+      },
+      "mann_whitney": {
+        "U": 1154532249.0,
+        "p_value": 1.827e-15,
+        "nota": "dominancia estocástica"
+      },
+      "bootstrap_ratio": {
+        "IC95_lift_pct": [
+          4.048,
+          8.187
+        ],
+        "nota": "sin supuesto distribucional"
+      }
+    },
+    "guardrails": {
+      "G1_review_score": {
+        "control": 4.1137,
+        "treatment": 4.1158,
+        "diff": 0.0021,
+        "p_welch": 0.8040402945385485,
+        "umbral_alarma": "caída >= 0.05 pts",
+        "p_ajustado_BH": 0.804,
+        "significativo_tras_BH": false
+      },
+      "G2_cancelacion": {
+        "control_pct": 0.541,
+        "treatment_pct": 0.57,
+        "z_stat": -0.587,
+        "p_welch": 0.5572,
+        "umbral_alarma": "subida significativa",
+        "p_ajustado_BH": 0.772,
+        "significativo_tras_BH": false
+      },
+      "G3_freight_value": {
+        "control": 22.742,
+        "treatment": 22.887,
+        "diff": 0.145,
+        "p_welch": 0.3046130282249461,
+        "umbral_alarma": "subida significativa",
+        "p_ajustado_BH": 0.772,
+        "significativo_tras_BH": false
+      },
+      "G4_n_items": {
+        "control": 1.14,
+        "treatment": 1.1381,
+        "diff": -0.0019,
+        "p_welch": 0.5790246533335446,
+        "umbral_alarma": "caída significativa",
+        "p_ajustado_BH": 0.772,
+        "significativo_tras_BH": false
+      }
+    },
+    "guardrails_nota": "G2 (cancelación) se evalúa sobre la tabla de pedidos completa, no la analítica (que ya filtra estados). Sin efecto inyectado en guardrails -> se espera no degradación."
+  },
+  "5_decision_scenarios": {
+    "nota": "regla §1.5 · MDE relevancia = +3.0% · guardrails no inyectados (siempre OK) · este split tiene +1,2% de desbalance basal",
+    "escenarios": [
+      {
+        "ATE_inyectado_pct": 0,
+        "lift_observado_pct": 1.01,
+        "IC95_pct": [
+          -0.63,
+          2.65
+        ],
+        "p_value": 0.227,
+        "decision": "NO LANZAR"
+      },
+      {
+        "ATE_inyectado_pct": 1,
+        "lift_observado_pct": 1.95,
+        "IC95_pct": [
+          0.3,
+          3.6
+        ],
+        "p_value": 0.0203,
+        "decision": "ITERAR"
+      },
+      {
+        "ATE_inyectado_pct": 2,
+        "lift_observado_pct": 2.89,
+        "IC95_pct": [
+          1.23,
+          4.54
+        ],
+        "p_value": 0.000621,
+        "decision": "ITERAR"
+      },
+      {
+        "ATE_inyectado_pct": 3,
+        "lift_observado_pct": 3.82,
+        "IC95_pct": [
+          2.16,
+          5.48
+        ],
+        "p_value": 6.45e-06,
+        "decision": "ITERAR"
+      },
+      {
+        "ATE_inyectado_pct": 4,
+        "lift_observado_pct": 4.75,
+        "IC95_pct": [
+          3.08,
+          6.41
+        ],
+        "p_value": 2.35e-08,
+        "decision": "LANZAR"
+      },
+      {
+        "ATE_inyectado_pct": 5,
+        "lift_observado_pct": 5.67,
+        "IC95_pct": [
+          3.99,
+          7.34
+        ],
+        "p_value": 3.09e-11,
+        "decision": "LANZAR"
+      },
+      {
+        "ATE_inyectado_pct": 8,
+        "lift_observado_pct": 8.4,
+        "IC95_pct": [
+          6.71,
+          10.09
+        ],
+        "p_value": 2.25e-22,
+        "decision": "LANZAR"
+      }
+    ]
+  }
+}

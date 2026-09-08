@@ -14,13 +14,7 @@ Todo con semillas fijas.
 
 from __future__ import annotations
 
-try:
-    import sys as _sys; _sys.stdout.reconfigure(encoding="utf-8")
-except Exception:
-    pass
-
 import json
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -28,48 +22,18 @@ from scipy import stats
 from statsmodels.stats.power import TTestIndPower
 from statsmodels.stats.multitest import multipletests
 
-RAW = Path("data/raw")
-PROC = Path("data/processed")
-OUT_T = Path("outputs/tables")
-FIG = Path("outputs/figures")
-for p in (OUT_T, FIG):
-    p.mkdir(parents=True, exist_ok=True)
-
-# ---- parámetros declarados (coinciden con docs/01 §1.7b) --------------------
-SEED = 42
-ALPHA = 0.05
-P_RESP = 0.20            # fracción de tratados que responden
-DELTA_RESP = 0.25        # efecto entre respondedores (+25 %)
-EPS_SD = 0.05            # heterogeneidad entre respondedores
-ATE = P_RESP * DELTA_RESP  # = 0.05  -> +5 % efecto medio declarado
-N_SIM_AA = 2000
-N_SIM_POWER = 1000
-N_BOOT = 10_000
-TARGET_POWER = 0.80
+from config import (ALPHA, ANALYTICAL_TABLE, ATE, DELTA_RESP, EPS_SD, MDE_RELEVANCIA, N_BOOT, N_SIM_AA,
+                    N_SIM_MULTISEED, N_SIM_POWER, OUT_FIGURES as FIG, OUT_TABLES as OUT_T,
+                    P_RESP, PROC, RAW, SEED, TARGET_POWER, VALID_STATUS, WINDOW_END, WINDOW_START,
+                    WINSOR_Q, apply_plot_style)
+from effect_model import inject_diluted_effect
 
 import matplotlib.pyplot as plt
-plt.rcParams.update({"figure.dpi": 110, "savefig.dpi": 130, "font.size": 10,
-                     "axes.spines.top": False, "axes.spines.right": False})
+apply_plot_style()
 
 
 # ===========================================================================
-# 1. Efecto de tratamiento sintético — modelo diluido
-# ===========================================================================
-def inject_diluted_effect(values: np.ndarray, is_treat: np.ndarray, rng: np.random.Generator,
-                          p_resp=P_RESP, delta_resp=DELTA_RESP, eps_sd=EPS_SD) -> np.ndarray:
-    """Devuelve `values` con el efecto aplicado SOLO a los tratados.
-    R_i ~ Bernoulli(p_resp);  si responde: v_i *= (1 + delta_resp + eps_i)."""
-    out = values.astype(float).copy()
-    tr = np.where(is_treat)[0]
-    responders = rng.random(tr.size) < p_resp
-    eps = rng.normal(0.0, eps_sd, tr.size)
-    factor = np.where(responders, 1.0 + delta_resp + eps, 1.0)
-    out[tr] = out[tr] * factor
-    return out
-
-
-# ===========================================================================
-# 2. Power analysis
+# Power analysis
 # ===========================================================================
 def power_analysis(df: pd.DataFrame) -> dict:
     res = {}
@@ -159,8 +123,8 @@ def g2_cancellation_guardrail() -> dict:
     orders = pd.read_csv(RAW / "olist_orders_dataset.csv",
                          parse_dates=["order_purchase_timestamp"])
     customers = pd.read_csv(RAW / "olist_customers_dataset.csv")
-    m = (orders["order_purchase_timestamp"] >= "2017-01-01") & \
-        (orders["order_purchase_timestamp"] < "2018-09-01")
+    m = (orders["order_purchase_timestamp"] >= WINDOW_START) & \
+        (orders["order_purchase_timestamp"] < WINDOW_END)
     o = orders[m].merge(customers[["customer_id", "customer_unique_id"]], on="customer_id", how="left")
     o = o.sort_values("order_purchase_timestamp").drop_duplicates("customer_unique_id", keep="first")
     rng = np.random.default_rng(SEED)
@@ -407,8 +371,6 @@ def run_ab_test(df: pd.DataFrame) -> dict:
     return res
 
 
-MDE_RELEVANCIA = 3.0  # % (§1.5)
-
 
 def decision_scenarios(df: pd.DataFrame) -> dict:
     """Aplica la regla de decisión (§1.5) a varios tamaños de efecto inyectado.
@@ -522,7 +484,7 @@ def heterogeneous_effect_variant(df: pd.DataFrame) -> dict:
     }
 
 
-def ab_multiseed(df: pd.DataFrame, n_seeds: int = 500) -> dict:
+def ab_multiseed(df: pd.DataFrame, n_seeds: int = N_SIM_MULTISEED) -> dict:
     """Auditoría §4 punto 4 / mejora nº3: repetir el A/B COMPLETO sobre muchas semillas
     (re-split + re-inyección del efecto diluido) para medir la distribución del estimador y la
     cobertura real del IC 95 %. Cierra la debilidad del 'un solo split'.
@@ -574,14 +536,14 @@ def clustered_se_robustness() -> dict:
     orders = pd.read_csv(RAW / "olist_orders_dataset.csv", parse_dates=["order_purchase_timestamp"])
     items = pd.read_csv(RAW / "olist_order_items_dataset.csv")
     customers = pd.read_csv(RAW / "olist_customers_dataset.csv")
-    mw = (orders.order_purchase_timestamp >= "2017-01-01") & (orders.order_purchase_timestamp < "2018-09-01")
-    valid = {"delivered", "shipped", "invoiced", "approved", "processing"}
+    mw = (orders.order_purchase_timestamp >= WINDOW_START) & (orders.order_purchase_timestamp < WINDOW_END)
+    valid = VALID_STATUS
     merch = items.groupby("order_id")["price"].sum().rename("mv")
     o = (orders[mw & orders.order_status.isin(valid)]
          .merge(merch, on="order_id").dropna(subset=["mv"])
          .merge(customers[["customer_id", "customer_unique_id"]], on="customer_id"))
     # MISMA asignación que el análisis principal: mapa cliente->grupo de la tabla analítica
-    at = pd.read_parquet(PROC / "analytical_table.parquet")[["customer_unique_id", "group"]]
+    at = pd.read_parquet(ANALYTICAL_TABLE)[["customer_unique_id", "group"]]
     cmap = at.set_index("customer_unique_id")["group"].map({"control": 0, "treatment": 1})
     o = o[o["customer_unique_id"].isin(cmap.index)].copy()
     o["treat"] = o["customer_unique_id"].map(cmap).astype(float)
@@ -589,7 +551,7 @@ def clustered_se_robustness() -> dict:
     rng = np.random.default_rng(SEED)
     is_t = o["treat"].values.astype(bool)
     o["mv_e"] = inject_diluted_effect(o["mv"].values, is_t, rng)
-    cap = o["mv_e"].quantile(0.995)
+    cap = o["mv_e"].quantile(WINSOR_Q)
     o["mv_e"] = np.minimum(o["mv_e"], cap)
     base = o.loc[~is_t, "mv_e"].mean()
 
@@ -615,7 +577,7 @@ def clustered_se_robustness() -> dict:
 
 # ===========================================================================
 def main():
-    df = pd.read_parquet(PROC / "analytical_table.parquet")
+    df = pd.read_parquet(ANALYTICAL_TABLE)
     report = {
         "parametros": {"SEED": SEED, "ALPHA": ALPHA, "P_RESP": P_RESP, "DELTA_RESP": DELTA_RESP,
                        "EPS_SD": EPS_SD, "ATE_pct": ATE * 100, "N_SIM_AA": N_SIM_AA,

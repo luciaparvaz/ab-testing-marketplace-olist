@@ -325,10 +325,14 @@ en §4.6 y se reportan crudo y winsor por separado.
 5. **Cuantificar una predicción propia y refutarla** (la penalización por dilución resultó
    despreciable) y decirlo.
 6. **La demo de p-hacking** (estimando correcto vs incorrecto; BH vs Bonferroni).
-7. **Trazabilidad y reproducibilidad**: 8 commits (uno por fase + auditorías), semillas fijas,
-   outputs byte-idénticos tras re-ejecución, notebook que corre de punta a punta.
+7. **Trazabilidad y reproducibilidad**: un commit por fase + auditorías; semillas fijas; outputs
+   byte-idénticos tras re-ejecución. **Endurecida tras la crítica del usuario**: `params.yaml` como
+   única fuente de verdad, `run_all.py` como único entrypoint con informe de reproducibilidad,
+   notebook reducido a capa de solo-lectura (sin ruta de ejecución paralela), suite `pytest` con
+   un test de idempotencia bit a bit.
 8. **Autocrítica documentada**: 3 auditorías (esta incluida) que encontraron y corrigieron cosas
-   reales (F-test → HC3; "casi normal" → matizado; SE por clúster → dedup).
+   reales (F-test → HC3; "casi normal" → matizado; SE por clúster → dedup; SEED duplicado →
+   `config.py`).
 
 ---
 

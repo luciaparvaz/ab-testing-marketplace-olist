@@ -10,21 +10,13 @@ Salida: outputs/tables/fase2_*.csv  y  un resumen por stdout.
 
 from __future__ import annotations
 
-try:
-    import sys as _sys; _sys.stdout.reconfigure(encoding="utf-8")
-except Exception:
-    pass
-
 import json
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from scipy import stats
 
-RAW = Path("data/raw")
-OUT_T = Path("outputs/tables")
-OUT_T.mkdir(parents=True, exist_ok=True)
+from config import OUT_TABLES as OUT_T, RAW
 
 pd.set_option("display.width", 160)
 pd.set_option("display.max_columns", 40)
@@ -110,7 +102,7 @@ def main():
     n_items = items.groupby("order_id").size().rename("n_items")
 
     # solo pedidos entregados o en camino cuentan como "compra realizada"
-    valid_status = {"delivered", "shipped", "invoiced", "approved", "processing"}
+    from config import VALID_STATUS as valid_status
     o = orders[["order_id", "customer_id", "order_status", "order_purchase_timestamp"]].copy()
     o = o.merge(merch, on="order_id", how="left").merge(freight, on="order_id", how="left")
     o = o.merge(n_items, on="order_id", how="left")

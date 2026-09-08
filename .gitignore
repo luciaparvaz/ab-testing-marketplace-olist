@@ -24,3 +24,4 @@ notebooklm/*.md
 notebooklm/*.pdf
 notebooklm/*_files/
 !notebooklm/_build_export.py
+notebooklm_export.zip

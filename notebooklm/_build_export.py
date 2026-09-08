@@ -45,13 +45,22 @@ for dst, src in DOC_ORDER:
     print("copiado", dst)
 
 # --- 2. código fuente en un solo .md -------------------------------------
-SRC_FILES = ["prepare_data.py", "balance_check.py", "profiling_fase2.py", "figures_fase2.py",
-             "modeling.py", "mde_cost_model.py", "evaluation.py"]
-parts = ["# Código fuente del proyecto (src/)\n",
-         "Todo el cálculo del análisis A/B vive aquí. Un fichero por fase de CRISP-DM.\n"]
-for f in SRC_FILES:
-    code = (ROOT / "src" / f).read_text(encoding="utf-8")
-    parts.append(f"\n\n---\n\n## `src/{f}`\n\n```python\n{code}\n```\n")
+CODE_FILES = [("params.yaml", "yaml"), ("run_all.py", "python"),
+              ("src/config.py", "python"), ("src/effect_model.py", "python"),
+              ("src/profiling_fase2.py", "python"), ("src/figures_fase2.py", "python"),
+              ("src/prepare_data.py", "python"), ("src/balance_check.py", "python"),
+              ("src/mde_cost_model.py", "python"), ("src/modeling.py", "python"),
+              ("src/evaluation.py", "python"),
+              ("tests/test_config.py", "python"), ("tests/test_effect_model.py", "python"),
+              ("tests/test_outputs.py", "python"), ("tests/test_reproducibility.py", "python")]
+parts = ["# Código fuente del proyecto\n",
+         "`params.yaml` = única fuente de verdad de los parámetros · `run_all.py` = único "
+         "entrypoint · `src/` = una fase de CRISP-DM por fichero · `tests/` = pytest.\n"]
+for rel, lang in CODE_FILES:
+    fp = ROOT / rel
+    if not fp.exists():
+        continue
+    parts.append(f"\n\n---\n\n## `{rel}`\n\n```{lang}\n{fp.read_text(encoding='utf-8')}\n```\n")
 (OUT / "80_codigo_fuente.md").write_text("".join(parts), encoding="utf-8")
 print("escrito 80_codigo_fuente.md")
 
@@ -77,7 +86,7 @@ for name in ["fase2_resumen.json", "fase4_resumen.json", "fase5_resumen.json"]:
         res.append(f"\n\n## `{name}`\n\n")
         res.append(_md_kv(json.loads(p.read_text(encoding="utf-8"))))
 for name in ["fase3_transformaciones.csv", "fase3_balance.csv", "fase3_srm.csv",
-             "fase5_segmentos.csv", "mde_cost_model.csv", "fase2_distribuciones.csv"]:
+             "fase5_segmentos.csv", "mde_cost_model.csv"]:
     p = ROOT / "outputs/tables" / name
     if p.exists():
         res.append(f"\n\n## `{name}`\n\n```\n{p.read_text(encoding='utf-8')}\n```\n")
@@ -125,4 +134,5 @@ imgdir = OUT / "90_notebook_ejecutado_files"
 if imgdir.exists():
     shutil.rmtree(imgdir)
 
-print("\nListo. Sube a NotebookLM el CONTENIDO de la carpeta notebooklm/ (13 .md + 1 .pdf).")
+n_md = len(list(OUT.glob("*.md")))
+print(f"\nListo. Sube a NotebookLM el CONTENIDO de la carpeta notebooklm/ ({n_md} .md + 1 .pdf).")

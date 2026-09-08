@@ -8,7 +8,14 @@ Verifica que control y treatment son intercambiables ANTES de inyectar ningún e
 
 Salida: outputs/tables/fase3_balance.csv  +  outputs/figures/f3_01_balance.png
 """
+
 from __future__ import annotations
+
+try:
+    import sys as _sys; _sys.stdout.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -69,6 +76,18 @@ def main():
     print(bal.to_string(index=False))
     print(f"\nTodas |SMD| < 0.10: {bal['balanceada'].all()}")
     print(f"Ningún test ómnibus significativo a 0.05: {(bal['p_value'] >= 0.05).all()}")
+
+    # --- SRM check (Sample Ratio Mismatch) ---
+    n_c, n_t = len(c), len(t)
+    chi2_srm, p_srm = stats.chisquare([n_c, n_t], [(n_c + n_t) / 2] * 2)
+    print(f"\n=== SRM check (¿el reparto es 50/50?) ===")
+    print(f"  control={n_c}  treatment={n_t}  ratio_t={n_t/(n_c+n_t):.4f}")
+    print(f"  chi2={chi2_srm:.3f}  p={p_srm:.4f}  ->  "
+          f"{'OK, compatible con 50/50' if p_srm > 0.01 else 'ALERTA: posible SRM, revisar la asignación'}")
+    pd.DataFrame([{"n_control": n_c, "n_treatment": n_t, "ratio_treatment": round(n_t/(n_c+n_t), 5),
+                   "chi2": round(chi2_srm, 4), "p_value": round(p_srm, 4),
+                   "veredicto": "sin SRM" if p_srm > 0.01 else "SRM"}]
+                 ).to_csv(OUT_T / "fase3_srm.csv", index=False)
 
     # --- chequeo A/A puntual sobre la métrica primaria ---
     st, p = stats.ttest_ind(t.merch_value, c.merch_value, equal_var=False)

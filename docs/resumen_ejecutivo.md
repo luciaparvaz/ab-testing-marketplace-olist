@@ -20,15 +20,15 @@ gratuito—. La hipótesis: los clientes añadirán artículos y **subirá el va
 |---|---|
 | **Métrica de éxito** | Valor medio del pedido (AOV) |
 | **Métricas de control** ("guardrails") | Puntuación de reseña, tasa de cancelación, coste de envío, nº de artículos por pedido |
-| **Umbral de relevancia** | El AOV debe subir **al menos un +3 %** para que el cambio compense su coste de desarrollo y mantenimiento |
+| **Umbral de relevancia** | El AOV debe subir **al menos un +3 %** para que el cambio compense su coste de desarrollo y mantenimiento (cifra obtenida de un modelo de break-even; válida para el volumen de pedidos de un marketplace de tamaño medio-grande) |
 | **Regla** | **Lanzar** solo si la mejora es estadísticamente sólida **y** su intervalo de confianza está entero por encima del +3 % **y** ningún guardrail se degrada |
 
 ## El resultado
 
 | | |
 |---|---|
-| **Efecto sobre el AOV** | **+5,7 %** (intervalo de confianza al 95 %: **+4,0 % a +7,3 %**) |
-| **Solidez estadística** | Muy alta (p ≈ 0,00000000003); confirmada con cuatro métodos alternativos |
+| **Efecto sobre el AOV** | **+5,7 %** (intervalo de confianza al 95 %: **+4,0 % a +7,3 %**); estimación entre +5,7 % y +6,1 % según el tratamiento de valores extremos |
+| **Solidez estadística** | Muy alta (p ≈ 0,00000000003); confirmada con cinco métodos alternativos y con 500 repeticiones del experimento |
 | **Guardrails** | **Ninguno se degrada** (satisfacción, cancelaciones, envío y tamaño de cesta se mantienen) |
 | **¿Funciona mejor en algún segmento?** | No: el efecto relativo es **homogéneo** entre tipo de pago, región, categoría, tamaño de cesta y trimestre |
 | **Impacto económico estimado** | **+R$ 456.000 al año** de valor de mercancía (intervalo: +R$ 322.000 a +R$ 591.000); ≈ **+R$ 68.000 al año** de ingreso por comisión |

@@ -11,18 +11,21 @@ significancia de relevancia y controlando el p-hacking en el análisis por segme
 
 ## 5.1 Resultado con reporte completo (no solo p-valor)
 
-| | Métrica primaria — AOV (winsorizado p99,5, efecto diluido inyectado) |
-|---|---|
-| Lift relativo | **+5,67 %** |
-| IC 95 % | **[+3,99 % ; +7,34 %]** |
-| Efecto absoluto | +R$ 7,58 / pedido |
-| p-valor | 3,1·10⁻¹¹ (log₁₀ p = −10,5) · t = 6,64 |
-| n | control 47.280 · treatment 47.423 |
-| Efecto verdadero inyectado | +5,0 % → **dentro del IC** |
+| Métrica primaria — AOV (efecto diluido inyectado) | Welch **winsor p99,5** | Welch **crudo** |
+|---|---|---|
+| Lift relativo | **+5,67 %** | **+6,11 %** |
+| IC 95 % | [+3,99 % ; +7,34 %] | [+4,09 % ; +8,13 %] |
+| p-valor | 3,1·10⁻¹¹ | 3,1·10⁻⁹ |
+| Efecto verdadero inyectado (+5,0 %) | **dentro del IC** | **dentro del IC** |
 
-El estimador puntual (+5,67 %) supera el +5 % inyectado por el **desbalance basal del split**
-(+1,2 %, no significativo, p = 0,235; Fase 3). Sobre 1.000 réplicas el estimador es insesgado
-(Fase 4). La decisión se ancla en el **IC**, no en el punto.
+n = control 47.280 · treatment 47.423.
+
+**Lectura del estimador puntual:** ambas versiones quedan por encima del +5 % inyectado por el
+**desbalance basal del split** `SEED=42` (+1,2 %, no significativo, p = 0,235; Fase 3). El A/B
+multi-semilla (Fase 4 §4.6) confirma que **en crudo el estimador es insesgado** (−0,03 pp sobre 500
+réplicas, cobertura del IC 0,94) y que la **winsorización lo atenúa −0,36 pp** (a cambio de menor
+varianza). Rango honesto del tamaño del efecto: **+5,7 % a +6,1 %**. La decisión se ancla en el
+**IC**, no en el punto — y ambos IC superan el MDE.
 
 ---
 
@@ -31,11 +34,15 @@ El estimador puntual (+5,67 %) supera el +5 % inyectado por el **desbalance basa
 | Pregunta | Criterio | Resultado |
 |---|---|---|
 | ¿Es **estadísticamente** significativo? | p < 0,05 | **Sí** (p ≈ 3·10⁻¹¹) |
-| ¿Es **relevante para el negocio**? | IC 95 % del lift **enteramente por encima** del MDE de relevancia (+3 %) | **Sí** — IC [+3,99 % ; +7,34 %] |
+| ¿Es **relevante para el negocio**? | IC 95 % del lift **enteramente por encima** del MDE de relevancia (+3 %) | **Sí** — IC [+3,99 % ; +7,34 %] (winsor) e [+4,09 % ; +8,13 %] (crudo) |
 
 Con n ≈ 47 k/grupo, un efecto trivial también saldría "significativo". Lo que hace **accionable**
 este resultado es que **todo el intervalo de confianza está por encima del umbral de relevancia de
 negocio**, no solo el estimador puntual.
+
+> El MDE de relevancia (+3 %) está **derivado de un modelo de break-even** (`src/mde_cost_model.py`,
+> `f_mde_breakeven.png`): es el lift por debajo del cual el margen incremental no cubre el coste de
+> propiedad del rediseño. Válido para un marketplace con ≥ ~415 k pedidos/año (payback 2 años).
 
 ### Impacto económico estimado
 

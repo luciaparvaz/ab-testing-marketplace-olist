@@ -31,6 +31,8 @@
 import os
 import sys
 import json
+import io
+import contextlib
 from pathlib import Path
 
 # situarse en la raíz del repo (el notebook vive en notebooks/)
@@ -45,6 +47,11 @@ from IPython.display import Image, display
 pd.set_option("display.width", 140)
 pd.set_option("display.max_columns", 30)
 RNG_SEED = 42
+
+
+def _rj(path):
+    """lee un JSON en utf-8 (Windows abre en cp1252 por defecto)."""
+    return json.load(open(path, encoding="utf-8"))
 
 
 def _l(x):
@@ -168,6 +175,9 @@ bal = pd.DataFrame(rows, columns=["covariable", "tipo", "|SMD|", "p_omnibus"])
 display(bal)
 print(f"Todas |SMD| < 0,10: {(bal['|SMD|'] < 0.10).all()}   ·   ningún ómnibus significativo: "
       f"{(bal.p_omnibus >= 0.05).all()}")
+_srm = st.chisquare([len(c), len(t)], [(len(c) + len(t)) / 2] * 2)
+print(f"SRM check: control={len(c)} treatment={len(t)}  chi2={_srm.statistic:.3f} p={_srm.pvalue:.3f} "
+      f"-> {'sin SRM' if _srm.pvalue > 0.01 else 'ALERTA'}")
 display(Image("outputs/figures/f3_01_balance.png"))
 
 # %% [markdown]
@@ -175,25 +185,31 @@ display(Image("outputs/figures/f3_01_balance.png"))
 # ## Fase 4 — Modeling (diseño estadístico del experimento)
 #
 # Power analysis a priori → verificación de supuestos → calibración A/A (2.000 particiones) →
-# test A/B con el efecto declarado. **Puede tardar ~1 min** (simulaciones con semilla fija).
+# test A/B con el efecto declarado → robustez adicional (auditoría global).
+# **Ejecuta el pipeline completo de la Fase 4 (~3–4 min, semillas fijas).**
 
 # %%
-from modeling import power_analysis, check_assumptions, aa_calibration, run_ab_test
+import modeling
+with contextlib.redirect_stdout(io.StringIO()):
+    modeling.main()                       # regenera fase4_resumen.json + figuras f4_*
+f4 = _rj("outputs/tables/fase4_resumen.json")
+print("Fase 4 ejecutada.")
 
-pw = power_analysis(df)
+# %%
+pw = f4["1_power_analysis"]
 print("POWER ANALYSIS")
 for k in ["crudo", "winsor_p99.5"]:
     r = pw[k]
     print(f"  [{k:12}] MDE detectable 80% = +{r['mde_rel_detectable_80pct_pct']}%  ·  "
           f"potencia(ATE=+5%, diluido) = {r['power_efecto_diluido_+5pct_ATE']}  ·  "
-          f"lift medio estimado (1000 sims) = {r['lift_medio_estimado_sim_pct']}%  (sesgo ≈ 0)")
-pen = pw["crudo"]["penalizacion_potencia_por_dilucion_pp"]
-print(f"\n  Penalización de potencia por efecto diluido: {pen} pp  ->  despreciable "
+          f"lift medio (1000 sims) = {r['lift_medio_estimado_sim_pct']}%  (sesgo {r['sesgo_estimador_pp']} pp)")
+print(f"\n  Penalización de potencia por efecto diluido: "
+      f"{pw['crudo']['penalizacion_potencia_por_dilucion_pp']} pp  ->  despreciable "
       f"(la varianza natural del AOV, CV≈1,5, domina). Predicción de la Fase 1 cuantificada.")
 display(Image("outputs/figures/f4_04_power_vs_n.png"))
 
 # %%
-asm = check_assumptions(df)
+asm = f4["2_supuestos"]
 print("VERIFICACIÓN DE SUPUESTOS")
 print(f"  Normalidad de los datos brutos : p = {asm['normalidad_datos_brutos']['p']}  (no normal, esperado)")
 print(f"  Normalidad de la media (TCL)   : p = {asm['normalidad_de_la_media_bootstrap']['p']}  -> Welch-t válido")
@@ -203,16 +219,14 @@ print(f"  Homocedasticidad CON efecto    : Levene p = {asm['homocedasticidad_con
 display(Image("outputs/figures/f4_01_tcl_normalidad.png"))
 
 # %%
-aa = aa_calibration(df)
 print("CALIBRACIÓN A/A  (2.000 particiones aleatorias, sin efecto)")
-for k, v in aa.items():
+for k, v in f4["3_aa_calibracion"].items():
     print(f"  [{k:14}] falsos positivos = {v['tasa_falsos_positivos_alpha_0.05']:.3f}  "
           f"(IC95 {_l(v['IC95_tasa'])})  ·  KS p-valores = {v['KS_vs_uniforme_p']:.3f}  ->  {v['veredicto']}")
 display(Image("outputs/figures/f4_02_aa_pvalores.png"))
 
 # %%
-ab = run_ab_test(df)
-p = ab["primario"]
+p = f4["4_ab_test"]["primario"]
 print("TEST A/B  —  efecto diluido inyectado (SEED=42)")
 print(f"  PRIMARIO  Welch · AOV winsor : lift = +{p['Welch_winsor_p99.5']['lift_rel_pct']}%  "
       f"IC95 {_l(p['Welch_winsor_p99.5']['IC95_lift_pct'])}%  ·  p = {p['Welch_winsor_p99.5']['p_value']}")
@@ -220,17 +234,62 @@ print(f"  robustez  Welch crudo       : +{p['Welch_crudo']['lift_rel_pct']}%  {_
 print(f"  robustez  bootstrap (10k)   : {_l(p['bootstrap_ratio']['IC95_lift_pct'])}%")
 print(f"  el efecto verdadero (+5 %) está dentro del IC: {p['Welch_winsor_p99.5']['ATE_5pct_en_IC']}")
 print("\n  GUARDRAILS (Benjamini-Hochberg):")
-for g, v in ab["guardrails"].items():
+for g, v in f4["4_ab_test"]["guardrails"].items():
     print(f"    {g:20}  p ajustado BH = {v['p_ajustado_BH']:.3f}  ->  degradado: {v['significativo_tras_BH']}")
 display(Image("outputs/figures/f4_03_ab_efecto.png"))
+
+# %% [markdown]
+# ### Fase 4 · robustez adicional (mejoras de la auditoría global)
+#
+# Cuatro comprobaciones que un revisor senior pediría.
+
+# %%
+
+ms = f4["8_ab_multiseed"]
+print("A/B MULTI-SEMILLA (500 réplicas: re-split + re-inyección)")
+for k in ("crudo", "winsor_p99.5"):
+    m = ms[k]
+    print(f"  [{k:12}] lift medio = {m['lift_medio_pct']}%  sesgo = {m['sesgo_pp']} pp  "
+          f"cobertura IC95 del +5% = {m['cobertura_IC95_del_+5pct']}")
+print("  -> crudo INSESGADO y con cobertura nominal; winsor gana varianza a costa de -0,36 pp de sesgo.")
+
+gr = f4["6_guardrail_regression"]
+print("\nREGRESIÓN INYECTADA EN G1 (regla de dos puertas: significativo Y magnitud >= 0,05)")
+for s in gr["escenarios"]:
+    print(f"  inyectado {s['regresion_inyectada_pts']:+.2f} pts -> p={s['p_value']:.1e}  "
+          f"bloquea(regla Y): {s['regla_AND_(significativo Y magnitud)']}")
+print("  -> a n grande TODO es significativo; la regla necesita la puerta de magnitud.")
+
+het = f4["7_efecto_heterogeneo"]
+print(f"\nVARIANTE CON EFECTO HETEROGÉNEO REAL (concentrado bajo R$ {het['umbral_envio_gratis_R$']:.0f})")
+print(f"  lift en banda = {het['lift_en_banda_pct']}%   fuera = {het['lift_fuera_de_banda_pct']}%   "
+      f"interacción p = {het['p_interaccion_cerca_del_umbral_HC3']}")
+print("  -> el análisis de segmentos SÍ detecta heterogeneidad cuando existe (contraste con Fase 5).")
+
+cl = f4["9_clustered_se"]
+print(f"\nTODOS LOS PEDIDOS + SE POR CLÚSTER DE CLIENTE")
+print(f"  lift = {cl['lift_pct_todos_los_pedidos']}%  (dedup: {cl['lift_pct_dedup_1_pedido_cliente_ref']}%)  "
+      f"·  el clustering infla el SE solo {cl['inflacion_SE_por_clustering_pct']}%")
+
+# %% [markdown]
+# ### Fase 4 · MDE de relevancia derivado de un modelo de costes
+#
+# El +3 % no se aserta: es el *break-even* del rediseño (margen incremental = coste de propiedad).
+
+# %%
+import mde_cost_model
+with contextlib.redirect_stdout(io.StringIO()):
+    mde_cost_model.main()
+_mde = pd.read_csv("outputs/tables/mde_cost_model.csv")
+display(_mde.pivot(index="pedidos_anio", columns="horizonte_payback_anios", values="MDE_breakeven_pct"))
+print("El +3% es válido para un marketplace con >= ~415.000 pedidos/año (payback 2 años).")
+display(Image("outputs/figures/f_mde_breakeven.png"))
 
 # %% [markdown]
 # ---
 # ## Fase 5 — Evaluación (Evaluation)
 
 # %%
-import contextlib
-import io
 import evaluation
 
 with contextlib.redirect_stdout(io.StringIO()):   # evaluation.main() imprime el JSON completo
@@ -238,7 +297,7 @@ with contextlib.redirect_stdout(io.StringIO()):   # evaluation.main() imprime el
 print("Fase 5 ejecutada -> outputs/tables/fase5_resumen.json")
 
 # %%
-res5 = json.load(open("outputs/tables/fase5_resumen.json"))
+res5 = _rj("outputs/tables/fase5_resumen.json")
 prim = res5["1_resultado_primario"]
 imp = res5["2_impacto_negocio"]
 anc = res5["3_ancova"]
@@ -287,17 +346,23 @@ for cv in dec["caveats"]:
 # - **Resumen ejecutivo (1 página, no técnico):** `docs/resumen_ejecutivo.md`
 # - **README del repositorio:** `README.md`
 # - **Borrador de post de LinkedIn:** `docs/linkedin_post.md`
-# - **Documentación por fase:** `docs/0X_*.md` · **auditorías:** `docs/auditoria_*.md`
+# - **Documentación por fase:** `docs/0X_*.md`
+# - **Auditorías estadísticas:** `docs/auditoria_fase1_fase2.md` · `docs/auditoria_fase5.md` ·
+#   `docs/auditoria_global.md` (revisión de las 26 decisiones + 6 mejoras aplicadas)
 #
 # ### Qué demuestra este proyecto
 #
 # 1. **Diseño experimental completo** en un dominio de marketplace: hipótesis, métrica primaria única,
-#    guardrails, MDE de relevancia y regla de decisión — *antes* de mirar datos.
-# 2. **Power analysis** a priori y **verificación empírica** (A/A sobre 2.000 particiones: falsos
-#    positivos al 5 %, p-valores uniformes).
+#    guardrails con regla de dos puertas, **MDE derivado de un modelo de costes**, y regla de
+#    decisión — *antes* de mirar datos.
+# 2. **Power analysis** a priori y **verificación empírica**: A/A sobre 2.000 particiones (falsos
+#    positivos al 5 %) y **A/B multi-semilla** sobre 500 (estimador insesgado en crudo, cobertura
+#    del IC ≈ 0,95).
 # 3. **Verificación de supuestos** que cambia el test elegido (heterocedasticidad bajo H1 → Welch).
 # 4. **Separación de significancia y relevancia** de negocio, con impacto en R$.
-# 5. **Control de p-hacking**: segmentos pre-especificados, corrección por multiplicidad, y una
-#    demostración de cómo la escala equivocada del estimando fabrica hallazgos que ni Bonferroni
+# 5. **Control de p-hacking**: segmentos pre-especificados, corrección por multiplicidad, y la
+#    demostración de que la escala equivocada del estimando fabrica hallazgos que ni Bonferroni
 #    elimina.
-# 6. **Honestidad metodológica**: el efecto es sintético y declarado; el proyecto valida el *proceso*.
+# 6. **Robustez**: la winsorización mete −0,36 pp de sesgo (se reporta crudo y winsor); el diseño
+#    caza una regresión de guardrail de −0,08 pts y detecta heterogeneidad real cuando existe.
+# 7. **Honestidad metodológica**: el efecto es sintético y declarado; el proyecto valida el *proceso*.

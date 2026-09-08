@@ -87,7 +87,7 @@
     "normalidad_de_la_media_bootstrap": {
       "DAgostino_K2": 0.383,
       "p": 0.8259,
-      "veredicto": "compatible con normal -> Welch-t v�lido"
+      "veredicto": "compatible con normal -> Welch-t válido"
     },
     "homocedasticidad_sin_efecto": {
       "Levene_stat": 1.608,
@@ -99,7 +99,7 @@
       "p": 1.64e-06,
       "veredicto": "el efecto diluido INFLA la varianza del treatment -> usar Welch, NO Student"
     },
-    "independencia": "por dise�o: asignaci�n aleatoria + dedup a 1 pedido/cliente elimina correlaci�n intra-cliente. SUTVA asumido (sin interferencia entre clientes)."
+    "independencia": "por diseño: asignación aleatoria + dedup a 1 pedido/cliente elimina correlación intra-cliente. SUTVA asumido (sin interferencia entre clientes)."
   },
   "3_aa_calibracion": {
     "merch_value": {
@@ -173,12 +173,12 @@
       "log_geom_ratio": {
         "lift_geom_pct": 4.788,
         "p_value": 1.389e-14,
-        "nota": "cociente de medias geom�tricas (~mediana), NO el AOV"
+        "nota": "cociente de medias geométricas (~mediana), NO el AOV"
       },
       "mann_whitney": {
         "U": 1154532249.0,
         "p_value": 1.827e-15,
-        "nota": "dominancia estoc�stica"
+        "nota": "dominancia estocástica"
       },
       "bootstrap_ratio": {
         "IC95_lift_pct": [
@@ -194,7 +194,7 @@
         "treatment": 4.1158,
         "diff": 0.0021,
         "p_welch": 0.8040402945385485,
-        "umbral_alarma": "ca�da >= 0.05 pts",
+        "umbral_alarma": "caída >= 0.05 pts",
         "p_ajustado_BH": 0.804,
         "significativo_tras_BH": false
       },
@@ -221,15 +221,15 @@
         "treatment": 1.1381,
         "diff": -0.0019,
         "p_welch": 0.5790246533335446,
-        "umbral_alarma": "ca�da significativa",
+        "umbral_alarma": "caída significativa",
         "p_ajustado_BH": 0.772,
         "significativo_tras_BH": false
       }
     },
-    "guardrails_nota": "G2 (cancelaci�n) se eval�a sobre la tabla de pedidos completa, no la anal�tica (que ya filtra estados). Sin efecto inyectado en guardrails -> se espera no degradaci�n."
+    "guardrails_nota": "G2 (cancelación) se evalúa sobre la tabla de pedidos completa, no la analítica (que ya filtra estados). Sin efecto inyectado en guardrails -> se espera no degradación."
   },
   "5_decision_scenarios": {
-    "nota": "regla �1.5 � MDE relevancia = +3.0% � guardrails no inyectados (siempre OK) � este split tiene +1,2% de desbalance basal",
+    "nota": "regla §1.5 · MDE relevancia = +3.0% · guardrails no inyectados (siempre OK) · este split tiene +1,2% de desbalance basal",
     "escenarios": [
       {
         "ATE_inyectado_pct": 0,
@@ -302,5 +302,94 @@
         "decision": "LANZAR"
       }
     ]
+  },
+  "6_guardrail_regression": {
+    "base_review_control": 4.1137,
+    "umbral_magnitud_pts": 0.05,
+    "escenarios": [
+      {
+        "regresion_inyectada_pts": 0.0,
+        "diff_observada_pts": 0.0021,
+        "p_value": 0.804,
+        "significativo": false,
+        "magnitud_>=_0.05": false,
+        "regla_OR_(significativo O magnitud)": false,
+        "regla_AND_(significativo Y magnitud)": false
+      },
+      {
+        "regresion_inyectada_pts": -0.03,
+        "diff_observada_pts": -0.0279,
+        "p_value": 0.00122,
+        "significativo": true,
+        "magnitud_>=_0.05": false,
+        "regla_OR_(significativo O magnitud)": true,
+        "regla_AND_(significativo Y magnitud)": false
+      },
+      {
+        "regresion_inyectada_pts": -0.05,
+        "diff_observada_pts": -0.0479,
+        "p_value": 2.79e-08,
+        "significativo": true,
+        "magnitud_>=_0.05": false,
+        "regla_OR_(significativo O magnitud)": true,
+        "regla_AND_(significativo Y magnitud)": false
+      },
+      {
+        "regresion_inyectada_pts": -0.08,
+        "diff_observada_pts": -0.0779,
+        "p_value": 1.65e-19,
+        "significativo": true,
+        "magnitud_>=_0.05": true,
+        "regla_OR_(significativo O magnitud)": true,
+        "regla_AND_(significativo Y magnitud)": true
+      }
+    ],
+    "hallazgo": "A n≈47k CUALQUIER regresión real es significativa (incluso −0,03). La regla original 'significativo O magnitud≥0,05' bloquearía el lanzamiento por ruido sub-umbral -> se corrige a 'significativo Y magnitud≥0,05'. Con la regla corregida: −0,03 NO bloquea (correcto), −0,08 SÍ bloquea (correcto). El test de guardrail tiene potencia sobrada para detectar la regresión."
+  },
+  "7_efecto_heterogeneo": {
+    "umbral_envio_gratis_R$": 150.0,
+    "pct_pedidos_en_banda": 22.4,
+    "lift_global_pct": 2.58,
+    "lift_en_banda_pct": 7.05,
+    "lift_fuera_de_banda_pct": 1.52,
+    "p_interaccion_cerca_del_umbral_HC3": 2.14e-15,
+    "heterogeneidad_detectada": true,
+    "hallazgo": "con un efecto realmente heterogéneo (concentrado bajo el umbral de envío gratis), el test de interacción SÍ lo detecta (p muy pequeño). Contraste con el análisis principal (efecto homogéneo -> ninguna interacción). El diseño distingue heterogeneidad real de artefactos."
+  },
+  "8_ab_multiseed": {
+    "n_semillas": 500,
+    "crudo": {
+      "lift_medio_pct": 4.969,
+      "sesgo_pp": -0.031,
+      "lift_sd_pp": 1.053,
+      "lift_p2.5_p97.5": [
+        2.93,
+        7.07
+      ],
+      "cobertura_IC95_del_+5pct": 0.942,
+      "potencia_empirica": 0.998
+    },
+    "winsor_p99.5": {
+      "lift_medio_pct": 4.64,
+      "sesgo_pp": -0.36,
+      "lift_sd_pp": 0.869,
+      "lift_p2.5_p97.5": [
+        2.93,
+        6.21
+      ],
+      "cobertura_IC95_del_+5pct": 0.92,
+      "potencia_empirica": 1.0
+    },
+    "hallazgo": "En CRUDO el estimador es INSESGADO (sesgo -0.031 pp) y el IC 95% cubre el valor real el 94% de las veces (nominal 95%). La WINSORIZACIÓN introduce un pequeño sesgo NEGATIVO (-0.36 pp) porque recorta más los valores altos del treatment (efecto multiplicativo) -> la cobertura baja a 92%. Es el precio de la reducción de varianza; la decisión (LANZAR) es robusta porque ambos IC superan el +3%. El +5,7% del split SEED=42 está dentro del rango p2,5-p97,5."
+  },
+  "9_clustered_se": {
+    "n_pedidos_sin_dedup": 97905,
+    "n_clientes": 94703,
+    "lift_pct_todos_los_pedidos": 5.713,
+    "lift_pct_dedup_1_pedido_cliente_ref": 5.666,
+    "SE_robusto_sin_clustering_R$": 1.1235,
+    "SE_cluster_por_cliente_R$": 1.136,
+    "inflacion_SE_por_clustering_pct": 1.11,
+    "hallazgo": "con TODOS los pedidos + SE por clúster de cliente, el SE es prácticamente idéntico al de la versión deduplicada (el 97% de clientes tiene 1 pedido -> el clustering apenas infla el SE, ~1%). El lift puntual difiere un poco porque incluye ~3.200 pedidos extra de clientes recurrentes, pero la conclusión (significativo, IC sobre el MDE) no cambia. Deduplicar fue la opción simple y correcta."
   }
 }

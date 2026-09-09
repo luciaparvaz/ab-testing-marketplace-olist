@@ -28,6 +28,7 @@ OUT.mkdir(exist_ok=True)
 # --- 1. copiar README + docs en orden de lectura --------------------------
 DOC_ORDER = [
     ("00_README.md", ROOT / "README.md"),
+    ("03_informe_completo.md", ROOT / "docs/informe_completo.md"),
     ("05_resumen_ejecutivo.md", ROOT / "docs/resumen_ejecutivo.md"),
     ("10_fase1_business_understanding.md", ROOT / "docs/01_business_understanding.md"),
     ("20_fase2_data_understanding.md", ROOT / "docs/02_data_understanding.md"),

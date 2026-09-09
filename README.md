@@ -7,6 +7,9 @@
 **Decisión final: 🟢 LANZAR** — el rediseño sube el AOV **+5,7 %** (IC 95 % [+4,0 %, +7,3 %]), por
 encima del umbral de relevancia de negocio (+3 %), sin degradar ningún guardrail.
 
+📖 **[`docs/informe_completo.md`](docs/informe_completo.md)** — informe de referencia: recorre cada
+fase, cada decisión, los resultados (redacción tipo TFM) y las limitaciones.
+
 ---
 
 ## ⚠️ Nota de honestidad metodológica
@@ -82,7 +85,7 @@ Es el trabajo que hace un equipo de experimentación de producto.
 │   ├── ab_test_olist.ipynb      # notebook de PRESENTACIÓN (solo lee outputs/, no calcula)
 │   └── ab_test_olist.py         # fuente jupytext (control de versiones)
 ├── outputs/{figures,tables}/    # figuras + JSON/CSV de resultados (regenerables)
-├── docs/                        # 01..06 por fase · 3 auditorías · resumen ejecutivo · post LinkedIn
+├── docs/                        # informe_completo · 01..06 por fase · 3 auditorías · resumen ejec. · post LinkedIn
 ├── requirements.txt · pytest.ini · LICENSE
 ```
 

@@ -916,6 +916,28 @@ Síntesis consolidada de las tres auditorías del proyecto (`docs/auditoria_fase
 dataset público de e-commerce sin experimento; las nº 3, 4 y 5 se abordaron en una segunda pasada;
 persiste un residuo de la nº 2 (la forma funcional del efecto es una elección declarada).
 
+### 10.1 ¿Son solucionables estas limitaciones?
+
+De las ocho limitaciones, **dos son estructurales** (no eliminables con este dataset y este
+escenario) y **seis son solucionables o ya están resueltas**.
+
+| # | Limitación | ¿Solucionable? | Cómo / por qué no |
+|---|---|:--:|---|
+| 1 | Experimento simulado → validez externa nula | ❌ **No**, sin cambiar la premisa | La única forma de arreglarlo es un dataset con **aleatorización real** (Criteo Uplift, Hillstrom, X5 RetailHero). Pero entonces la palanca deja de ser un cambio *on-site* en el checkout y pasa a ser un envío de marketing (email/SMS) → se cambia una limitación por otra. Los experimentos de producto reales **son propietarios y no se publican**. Mitigación posible: correr el mismo pipeline sobre Hillstrom como anexo → valida la maquinaria con datos reales, sin hacer real el análisis de Olist. |
+| 6 | Sin métrica de retención / LTV | ❌ **No**, con Olist | La recompra en Olist es ~3 % y la ventana es corta. Necesitaría un dominio con recompra natural (suscripción, telco) o un dataset como *DunnHumby — The Complete Journey* (2 años, hogares) — pero ese tiene campañas *targeted*, no aleatorizadas. Es una decisión de alcance, declarada. |
+| 3 | MDE de relevancia = +3 % | ✅ **Ya resuelta** | Pasó de asertado a **derivado** de un modelo de *break-even* (`src/mde_cost_model.py`). Mejorable solo con datos de coste reales, que no existen públicamente. |
+| 4 | Un solo *split* (SEED 42) | ✅ **Ya resuelta** | El A/B multi-semilla (500 réplicas) demuestra que el estimador es insesgado y el IC tiene cobertura 0,94. Se podría poner la media de las 500 como titular en vez del *split* 42. |
+| 5 | Guardrails sin efecto inyectado | ✅ **Ya resuelta (para G1)** | §6.8 inyecta regresiones en `review_score` y verifica que la regla de dos puertas caza −0,08 y deja pasar −0,03. Extensible a G2/G3/G4 en ~1 h. |
+| 2 | El modelo del efecto condiciona resultados (homogeneidad, artefacto de p-hacking) | 🟡 **Sí, con trabajo** | Promover la variante heterogénea de §6.8 a escenario principal; correr el análisis bajo 2–3 modelos de efecto (multiplicativo / aditivo / diluido) y mostrar qué conclusiones son sensibles al modelo. Lo convierte en un **análisis de sensibilidad transparente** en vez de una elección oculta. Residuo: cualquier efecto sintético sigue siendo una elección. |
+| — | Extrapolación económica lineal · comisión 15 % inventada | 🟡 **Mejorable** | Usar rangos de *take rate* publicados (Olist ~10–20 %) y una tabla de sensibilidad en vez de un punto. No hay cifras reales de Olist. |
+| — | Sesgo de winsorización −0,36 pp | ✅ **Solucionable** | Usar un estimador robusto insesgado (media truncada + IC bootstrap-BCa, o Hodges–Lehmann) en vez de winsorizar; o poner la métrica cruda como titular (ya insesgada). |
+| — | Ventana de 2 años ≠ experimento de 2–4 semanas | 🟡 **Solucionable con coste** | Restringir a un tramo de 3 semanas y re-ejecutar → n baja de 94 k a ~5 k, el MDE detectable sube a ~10 %. Muestra el escenario de duración realista pero se pierde potencia. |
+
+**Lectura para un portfolio.** El estado actual es bueno: un revisor valora más «conoce sus
+limitaciones y las dice» que «las esconde». Las mejoras pendientes son de rendimiento decreciente, y
+hacer desaparecer la limitación nº 1 requeriría datos propietarios (no disponibles) o un escenario
+más débil.
+
 ---
 
 ## 11. Discusión y conclusiones

@@ -7,7 +7,7 @@ Deliverables:
 
 | Deliverable | File | Audience |
 |---|---|---|
-| **Executive summary (1 page)** | `docs/resumen_ejecutivo.md` | Non-technical stakeholder (Product Lead, management) |
+| **Executive summary (1 page)** | `docs/executive_summary.md` | Non-technical stakeholder (Product Lead, management) |
 | **Presentation notebook** | `notebooks/ab_test_olist.ipynb` (+ jupytext `.py` source) | Technical reviewer / Data recruiter |
 | **Repository README** | `README.md` | GitHub visitor |
 | **LinkedIn post draft** | `docs/linkedin_post.md` | Professional network |

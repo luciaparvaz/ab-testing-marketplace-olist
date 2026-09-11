@@ -2,7 +2,7 @@
 
 > Cross-cutting review of **all** the project's methodological decisions: what was decided, why,
 > what alternatives existed, and what weakness remains. Complements the per-phase audits
-> (`auditoria_fase1_fase2.md`, `auditoria_fase5.md`).
+> (`audit_phase1_phase2.md`, `audit_phase5.md`).
 >
 > **Overall verdict:** the project is **methodologically sound and honest**. The central
 > limitation —the experiment is simulated— is declared everywhere. There are **6 residual
@@ -348,7 +348,7 @@ The 6 improvements proposed in the first version of this audit **have been imple
 | 3 | Multi-seed A/B (500 replicates), raw vs. winsor | `modeling.py :: ab_multiseed` · §4.6 | Raw unbiased (−0.03 pp), coverage 0.94; **winsor with −0.36 pp of bias** (new finding) |
 | 4 | Cost model for the MDE | `src/mde_cost_model.py` · §1.5 · `f_mde_breakeven.png` | The +3% is break-even for volume ≥ ~415k orders/year (2-year payback) |
 | 5 | All orders + customer-clustered SE | `modeling.py :: clustered_se_robustness` · §4.9 | Clustering inflates the SE by only 1.1%; lift +5.71% vs. +5.67% deduplicated |
-| 6 | Formal SRM check | `balance_check.py` · §3.5 · `fase3_srm.csv` | χ² = 0.216, p = 0.642 → no SRM |
+| 6 | Formal SRM check | `balance_check.py` · §3.5 · `phase3_srm.csv` | χ² = 0.216, p = 0.642 → no SRM |
 
 ---
 

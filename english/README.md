@@ -7,7 +7,7 @@
 **Final decision: 🟢 LAUNCH** — the redesign lifts the AOV by **+5.7%** (95% CI [+4.0%, +7.3%]),
 above the business relevance threshold (+3%), with no guardrail degraded.
 
-📖 **[`docs/informe_completo.md`](docs/informe_completo.md)** — reference report: walks through
+📖 **[`docs/full_report.md`](docs/full_report.md)** — reference report: walks through
 every phase, every decision, the results (written as a thesis-style report) and the limitations.
 
 🇪🇸 **Versión canónica en español: [`../README.md`](../README.md)**. This is a full mirror kept in
@@ -44,7 +44,7 @@ This is the work a product experimentation team does.
 | **3 · Data Preparation** | 2017-01/2018-08 window · dedup to 1 order/customer · p99.5 winsorization only for the significance test · simulated assignment | 94,703 order-customers · **balance OK** (\|SMD\| ≤ 0.02) · **SRM OK** (p = 0.64) |
 | **4 · Modeling** | Power analysis · assumptions · 2,000-partition A/A · A/B test · multi-seed A/B · guardrail regression · heterogeneous effect · clustered SE · cost model for the MDE | Detectable MDE **+2.3%** · A/A calibrated · dilution **< 1 pp** · **+3% MDE = break-even** |
 | **5 · Evaluation** | Significance vs. relevance · ANCOVA · segments + BH · p-hacking | **+5.7% (winsor) / +6.1% (raw)**, both CI > +3% · guardrails intact · homogeneous effect → **LAUNCH** |
-| **6 · Deployment** | Executive summary · notebook · README · LinkedIn post | [`docs/resumen_ejecutivo.md`](docs/resumen_ejecutivo.md) · [`notebooks/ab_test_olist.ipynb`](notebooks/ab_test_olist.ipynb) |
+| **6 · Deployment** | Executive summary · notebook · README · LinkedIn post | [`docs/executive_summary.md`](docs/executive_summary.md) · [`notebooks/ab_test_olist.ipynb`](notebooks/ab_test_olist.ipynb) |
 
 ### Methodological findings of the project
 
@@ -77,8 +77,8 @@ This is the work a product experimentation team does.
 ├── src/
 │   ├── config.py                # loads params.yaml + absolute paths; no one else defines constants
 │   ├── effect_model.py          # inject_diluted_effect (shared, no side effects)
-│   ├── profiling_fase2.py       # Phase 2 — profiling
-│   ├── figures_fase2.py         # Phase 2 — figures
+│   ├── profiling_phase2.py       # Phase 2 — profiling
+│   ├── figures_phase2.py         # Phase 2 — figures
 │   ├── prepare_data.py          # Phase 3 — analytical table + simulated assignment
 │   ├── balance_check.py         # Phase 3 — covariate balance check + SRM
 │   ├── mde_cost_model.py        # Phase 4 — relevance MDE derived from a break-even
@@ -89,7 +89,7 @@ This is the work a product experimentation team does.
 │   ├── ab_test_olist.ipynb      # PRESENTATION notebook (only reads outputs/, computes nothing)
 │   └── ab_test_olist.py         # jupytext source (version control)
 ├── outputs/{figures,tables}/    # figures + JSON/CSV results (regenerable)
-├── docs/                        # informe_completo · 01..06 per phase · 4 audits (incl. auditoria_implementacion.md) · exec. summary · LinkedIn post
+├── docs/                        # informe_completo · 01..06 per phase · 4 audits (incl. audit_implementation.md) · exec. summary · LinkedIn post
 ├── requirements.txt · pytest.ini · LICENSE
 ```
 

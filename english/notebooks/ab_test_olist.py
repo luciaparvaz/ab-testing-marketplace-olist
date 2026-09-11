@@ -61,8 +61,8 @@ def L(x):
     return [round(float(v), 3) for v in x]
 
 
-_needed = ["fase2_resumen.json", "fase3_balance.csv", "fase3_srm.csv",
-           "fase4_resumen.json", "fase5_resumen.json"]
+_needed = ["phase2_summary.json", "phase3_balance.csv", "phase3_srm.csv",
+           "phase4_summary.json", "phase5_summary.json"]
 _missing = [f for f in _needed if not (TABLES / f).exists()]
 if _missing:
     raise SystemExit(f"Missing results {_missing}. Run first:  python run_all.py")
@@ -109,7 +109,7 @@ print(f"  time window        : {config.WINDOW_START} .. {config.WINDOW_END}")
 # · **CC BY-NC-SA 4.0** license (verified on download) · ~100k orders · 9 relational tables.
 
 # %%
-f2 = rj("fase2_resumen.json")
+f2 = rj("phase2_summary.json")
 aov = f2["AOV_merch_value"]
 logaov = f2["AOV_log_merch"]
 print("PRIMARY METRIC — AOV (merchandise value per order)")
@@ -119,7 +119,7 @@ print(f"  log(AOV): skew = {logaov['skew']:.2f}   kurtosis = {logaov['kurtosis_e
 print(f"\n  {f2['orders_per_customer']['pct_customers_1_order']:.1f}% of customers with just 1 order "
       f"-> randomization unit ≈ analysis unit")
 print("  Reading: AOV is highly skewed; at large n the mean is normal by the CLT -> Welch-t primary.")
-display(Image(str(FIGURES / "f2_02_distribucion_aov.png")))
+display(Image(str(FIGURES / "f2_02_aov_distribution.png")))
 
 # %% [markdown]
 # **Validity limitations** (`docs/02_data_understanding.md` §2.7): no real randomization or traffic
@@ -135,11 +135,11 @@ display(Image(str(FIGURES / "f2_02_distribucion_aov.png")))
 # (moves the AOV only -0.35%) · **p99.5 winsorization only for the significance test**.
 
 # %%
-display(pd.read_csv(TABLES / "fase3_transformaciones.csv"))
+display(pd.read_csv(TABLES / "phase3_transformations.csv"))
 
 # %%
-bal = pd.read_csv(TABLES / "fase3_balance.csv")
-srm = pd.read_csv(TABLES / "fase3_srm.csv").iloc[0]
+bal = pd.read_csv(TABLES / "phase3_balance.csv")
+srm = pd.read_csv(TABLES / "phase3_srm.csv").iloc[0]
 display(bal[["covariable", "tipo", "SMD", "p_value", "balanceada"]])
 print(f"All |SMD| < 0.10: {bal['balanceada'].all()}   ·   no omnibus test significant: "
       f"{(bal['p_value'] >= 0.05).all()}")
@@ -152,7 +152,7 @@ display(Image(str(FIGURES / "f3_01_balance.png")))
 # ## Phase 4 — Modeling (statistical design of the experiment)
 
 # %%
-f4 = rj("fase4_resumen.json")
+f4 = rj("phase4_summary.json")
 pw = f4["1_power_analysis"]
 print("POWER ANALYSIS")
 for k in ("raw", "winsor_p99.5"):
@@ -173,14 +173,14 @@ print(f"  Normality of the mean (CLT)    : p = {asm['normality_bootstrap_mean'][
 print(f"  Homoscedasticity WITHOUT effect: Levene p = {asm['homoscedasticity_no_effect']['p']}")
 print(f"  Homoscedasticity WITH effect   : Levene p = {asm['homoscedasticity_diluted_effect']['p']}"
       f"  -> unequal variances under H1 -> use Welch, NOT Student")
-display(Image(str(FIGURES / "f4_01_tcl_normalidad.png")))
+display(Image(str(FIGURES / "f4_01_clt_normality.png")))
 
 # %%
 print("A/A CALIBRATION  (2,000 random partitions, no effect)")
 for k, v in f4["3_aa_calibration"].items():
     print(f"  [{k:14}] false positives = {v['false_positive_rate_alpha_0.05']:.3f}  "
           f"(95% CI {L(v['CI95_rate'])})  ·  KS vs. uniform p = {v['KS_vs_uniform_p']:.3f}  ->  {v['verdict']}")
-display(Image(str(FIGURES / "f4_02_aa_pvalores.png")))
+display(Image(str(FIGURES / "f4_02_aa_pvalues.png")))
 
 # %%
 p = f4["4_ab_test"]["primary"]
@@ -193,7 +193,7 @@ print(f"  the true effect (+5%) is within the CI: {p['Welch_winsor_p99.5']['ATE_
 print("\n  GUARDRAILS (Benjamini-Hochberg):")
 for g, v in f4["4_ab_test"]["guardrails"].items():
     print(f"    {g:20}  BH-adjusted p = {v['p_adjusted_BH']:.3f}  ->  degraded: {v['significant_after_BH']}")
-display(Image(str(FIGURES / "f4_03_ab_efecto.png")))
+display(Image(str(FIGURES / "f4_03_ab_effect.png")))
 
 # %% [markdown]
 # ### Phase 4 · additional robustness (global audit improvements)
@@ -241,7 +241,7 @@ display(Image(str(FIGURES / "f_mde_breakeven.png")))
 # ## Phase 5 — Evaluation
 
 # %%
-f5 = rj("fase5_resumen.json")
+f5 = rj("phase5_summary.json")
 prim, imp, anc = f5["1_primary_result"], f5["2_business_impact"], f5["3_ancova"]
 print("SIGNIFICANCE vs RELEVANCE")
 print(f"  Primary effect  : +{prim['lift_pct']}%   95% CI {L(prim['CI95_lift_pct'])}%   log10(p) = {prim['log10_p']}")
@@ -267,7 +267,7 @@ for esc in ("test_at_LEVEL_(mv_w)", "test_at_LOG_(relative_effect)"):
           f"after Bonferroni = {s['after_Bonferroni']}")
 print("  -> on the wrong scale (level) the artifacts of the multiplicative effect survive")
 print("     Bonferroni; on the correct scale (log) nothing survives. Correcting does not save a bad estimand.")
-display(Image(str(FIGURES / "f5_01_forest_segmentos.png")))
+display(Image(str(FIGURES / "f5_01_forest_segments.png")))
 
 # %%
 dec = f5["6_decision"]
@@ -284,11 +284,11 @@ for cv in dec["caveats"]:
 # ---
 # ## Phase 6 — Deployment
 #
-# - **Executive summary (1 page, non-technical):** `docs/resumen_ejecutivo.md`
+# - **Executive summary (1 page, non-technical):** `docs/executive_summary.md`
 # - **Repository README** · **LinkedIn post draft:** `docs/linkedin_post.md`
 # - **Per-phase documentation:** `docs/0X_*.md`
-# - **Audits:** `docs/auditoria_fase1_fase2.md` · `docs/auditoria_fase5.md` ·
-#   `docs/auditoria_global.md` (26 decisions + 6 improvements applied)
+# - **Audits:** `docs/audit_phase1_phase2.md` · `docs/audit_phase5.md` ·
+#   `docs/audit_global.md` (26 decisions + 6 improvements applied)
 #
 # ### Reproducibility
 #

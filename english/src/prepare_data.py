@@ -3,7 +3,7 @@ Phase 3 — Data Preparation.
 
 Builds the analytical table `1 row = 1 order-customer` from the 9 raw CSVs,
 applying ONLY the transformations justified by the experimental question (not generic EDA).
-Every step is logged and traced to `outputs/tables/fase3_transformaciones.csv`.
+Every step is logged and traced to `outputs/tables/phase3_transformations.csv`.
 
 It also simulates the random control/treatment assignment (per customer, 50/50, fixed seed) and
 saves the table ready for the statistical design of Phase 4. The treatment effect is NOT
@@ -11,7 +11,7 @@ injected here (that is Phase 4).
 
 Output:
   data/processed/analytical_table.parquet
-  outputs/tables/fase3_transformaciones.csv
+  outputs/tables/phase3_transformations.csv
 """
 
 from __future__ import annotations
@@ -138,7 +138,7 @@ def main():
 
     out_path = ANALYTICAL_TABLE
     tab.to_parquet(out_path, index=False)
-    pd.DataFrame(_LOG).to_csv(OUT_T / "fase3_transformaciones.csv", index=False)
+    pd.DataFrame(_LOG).to_csv(OUT_T / "phase3_transformations.csv", index=False)
 
     print(f"\n=== Analytical table: {tab.shape[0]} rows x {tab.shape[1]} columns -> {out_path} ===")
     print(tab.dtypes)

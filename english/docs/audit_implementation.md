@@ -1,7 +1,7 @@
 # Implementation audit — does the code do what the documents say?
 
-> Fourth round of self-review. Complements the three previous audits (`auditoria_fase1_fase2.md`,
-> `auditoria_fase5.md`, `auditoria_global.md`), which focused on the **numbers** and the
+> Fourth round of self-review. Complements the three previous audits (`audit_phase1_phase2.md`,
+> `audit_phase5.md`, `audit_global.md`), which focused on the **numbers** and the
 > **methodological decisions**. None of the three compared, line by line, the text of a `.md` file
 > against the code that is supposed to produce it. This one does: a full read of `params.yaml`,
 > `run_all.py`, the modules in `src/`, and the tests in `tests/`, checking every design claim
@@ -41,18 +41,18 @@ magnitude, not a simple relabeling of groups. The reason is that the `inner join
 they never had a valid order, so they were never really assigned to a group, and should not count
 in an experiment guardrail. Before, the guardrail measured cancellation over **everyone who bought
 in the window** (a figure close to the Phase 2 global cancellation rate, 0.63%,
-`fase2_resumen.json :: global_cancellation_rate_pct`); it now measures cancellation over **whoever
+`phase2_summary.json :: global_cancellation_rate_pct`); it now measures cancellation over **whoever
 was actually assigned to the experiment**, which by construction excludes anyone who only
 canceled. These are different populations by design — mixing in people the experiment never
 touched would artificially inflate the base rate and dilute any real degradation signal — and this
 is the methodologically correct definition for an experiment guardrail, not an inconsistency
-between the old and new version. It is documented in `fase4_resumen.json`'s own `guardrails_note`
+between the old and new version. It is documented in `phase4_summary.json`'s own `guardrails_note`
 field so that anyone comparing both numbers has the context without having to read the code.
 
 *(Field names below are the ones used in `english/src/`, which are the English translations of
 the Spanish field names in `src/` — e.g. `significant_after_BH` corresponds to
 `significativo_tras_BH` in the Spanish codebase. Both versions are functionally identical; see
-`docs/auditoria_implementacion.md` for the Spanish field names.)*
+`docs/audit_implementation.md` for the Spanish field names.)*
 
 **Regression test:** `tests/test_outputs.py :: test_g2_uses_same_assignment_as_analytical_table`
 independently recomputes control/treatment (a direct customer→group merge) and compares it against
@@ -94,8 +94,8 @@ actually governs the decision) instead of bare significance.
 - **Balance check via raw-text parsing** in `run_all.py::reproducibility_report()`
   (`"False" not in bal.split("balanceada")[1]`) — replaced with a `pandas` read and
   `bal["balanceada"].all()`, identical to the equivalent check in `test_outputs.py`.
-- **Outdated caption** in `figures_fase2.py` ("log(AOV) ... nearly normal"), which did not reflect
-  the nuance already applied to the text in `auditoria_fase1_fase2.md` — corrected to "robust range
+- **Outdated caption** in `figures_phase2.py` ("log(AOV) ... nearly normal"), which did not reflect
+  the nuance already applied to the text in `audit_phase1_phase2.md` — corrected to "robust range
   for the t-test; CLT at large n".
 - **Magic number `20`** (window length in months) hardcoded in `evaluation.py::main()` to annualize
   the economic impact — replaced with the same calculation derived from `WINDOW_START`/`WINDOW_END`

@@ -94,7 +94,7 @@ is negligible. Documented.
 
 ### B4. Segment forest plot (§5.4)
 
-Three levels recomputed by hand match `outputs/tables/fase5_segmentos.csv` exactly
+Three levels recomputed by hand match `outputs/tables/phase5_segments.csv` exactly
 (`cesta:1 item` +6.111%; `payment_type:credit_card` +6.027%; `cat_grupo:health_beauty` +12.317%).
 
 ### B5. Decision (§5.6)

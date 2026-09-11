@@ -176,14 +176,14 @@ def main():
     }
 
     # ---- save ----
-    (OUT_T / "fase2_resumen.json").write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
+    (OUT_T / "phase2_summary.json").write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
 
     # useful CSV tables
-    pd.Series(report["orders_per_month"]).to_csv(OUT_T / "fase2_orders_por_mes.csv", header=["n_orders"])
+    pd.Series(report["orders_per_month"]).to_csv(OUT_T / "phase2_orders_by_month.csv", header=["n_orders"])
     pd.DataFrame([report["AOV_merch_value"], report["AOV_with_freight"], report["freight_value"],
                   report["n_items_per_order"], report["AOV_log_merch"]],
                  index=["merch_value", "merch+freight", "freight", "n_items", "log(merch)"]
-                 ).to_csv(OUT_T / "fase2_distribuciones.csv")
+                 ).to_csv(OUT_T / "phase2_distributions.csv")
 
     # ---- print ----
     print(json.dumps(report, indent=2, ensure_ascii=False))

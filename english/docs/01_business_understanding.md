@@ -2,7 +2,7 @@
 
 > CRISP-DM · Phase 1 of 6
 > Project: A/B testing in a marketplace (Brazilian E-Commerce by Olist dataset)
-> Status: **closed** — AOV baseline fixed in Phase 2; refined after the audit (see `docs/auditoria_fase1_fase2.md`).
+> Status: **closed** — AOV baseline fixed in Phase 2; refined after the audit (see `docs/audit_phase1_phase2.md`).
 
 ---
 

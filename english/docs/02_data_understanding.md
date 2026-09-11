@@ -1,7 +1,7 @@
 # Phase 2 — Data Understanding
 
 > CRISP-DM · Phase 2 of 6
-> Reproducible script: `src/profiling_fase2.py` → `outputs/tables/fase2_resumen.json`
+> Reproducible script: `src/profiling_phase2.py` → `outputs/tables/phase2_summary.json`
 > Figures: `outputs/figures/f2_01…03.png`
 
 ---
@@ -42,7 +42,7 @@
   real experiment. Impact on n: less than 1% of valid orders is lost and the mean AOV changes from
   R$ 137.42 to R$ 137.37 (audit §B6) → this is an adjustment **for realism, not a bias correction**.
 - Since the assignment will be **random per customer**, *treatment* and *control* will cover the
-  same date range → **seasonality is balanced by design** (see `f2_01_volumen_mensual.png`).
+  same date range → **seasonality is balanced by design** (see `f2_01_monthly_volume.png`).
 
 ---
 
@@ -67,7 +67,7 @@ orders / 94,983 unique customers**.
 **Key readings (they shape Phase 4):**
 
 1. **The raw AOV is extremely skewed and leptokurtic** (skew ≈ 9.8; tail up to R$ 13,440 versus a
-   median of R$ 87). See `f2_02_distribucion_aov.png`.
+   median of R$ 87). See `f2_02_aov_distribution.png`.
 2. **The log transform brings the skewness and kurtosis into a robust range** (skew 9.8 → 0.24;
    kurtosis 271 → 0.33). It **still is formally not normal** (D'Agostino K² p ≈ 8·10⁻²⁴ at n =
    5,000 — audit §B1), but that is irrelevant: at large n the mean is normal by the CLT. **The
@@ -181,7 +181,7 @@ customer-clustered SE.
   validation; the validation is Phase 4's empirical power.
 - [x] Validity limitations listed.
 - [x] **Independent audit** of Phases 1-2 passed: no calculation errors, 7 refinements applied
-  (see `docs/auditoria_fase1_fase2.md`).
+  (see `docs/audit_phase1_phase2.md`).
 - **Next (Phase 3):** apply the 2017-01/2018-08 time window, deduplicate reviews by timestamp,
   deduplicate to 1 order/customer, apply p99.5 winsorization (significance test only), build the
   analytical table `1 row = 1 customer-order`, simulate the assignment, and run the *covariate

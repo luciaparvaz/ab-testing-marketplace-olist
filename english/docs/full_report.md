@@ -112,7 +112,7 @@ in every deliverable.
   of simulations, cost model).
 - **`src/config.py`** — loads `params.yaml`, adds absolute paths and derived values. No other
   module defines constants (there is a test that verifies this).
-- **`src/`** — one file per CRISP-DM phase (`profiling_fase2.py`, `figures_fase2.py`,
+- **`src/`** — one file per CRISP-DM phase (`profiling_phase2.py`, `figures_phase2.py`,
   `prepare_data.py`, `balance_check.py`, `mde_cost_model.py`, `modeling.py`, `evaluation.py`) plus
   `effect_model.py` (the synthetic effect, shared).
 - **`run_all.py`** — single *entrypoint*: runs the six phases in order, verifies that each one
@@ -280,7 +280,7 @@ redesign only moves a fraction of users.
 
 ## 4. Phase 2 — Data Understanding
 
-> Source document: `docs/02_data_understanding.md`. Script: `src/profiling_fase2.py`.
+> Source document: `docs/02_data_understanding.md`. Script: `src/profiling_phase2.py`.
 
 ### 4.1 Provenance, license, and structure
 
@@ -308,7 +308,7 @@ The raw range is 2016-09 to 2018-10, but 2016 is token (2016-11 is empty) and Se
 few orders (export cutoff). It is restricted to the **stable window 2017-01 → 2018-08**. Phase 3
 verifies this **does not change the mean AOV** (R$ 137.42 → R$ 137.37) and does not introduce
 bias: it is an adjustment **for realism** (making the duration resemble an experiment), not
-corrective. Figure: `f2_01_volumen_mensual.png`.
+corrective. Figure: `f2_01_monthly_volume.png`.
 
 ### 4.3 Primary metric profiling (AOV)
 
@@ -328,7 +328,7 @@ item): **n = 98,199 orders / 94,983 unique customers**.
 **Key readings** (they shape Phase 4):
 
 1. The raw AOV is **extremely skewed and leptokurtic** (tail up to R$ 13,440 versus a median of
-   R$ 87). Figure: `f2_02_distribucion_aov.png`.
+   R$ 87). Figure: `f2_02_aov_distribution.png`.
 2. The log transform brings the skewness and kurtosis into a **robust range** (skew 0.24; kurtosis
    0.34). It is still formally not normal (D'Agostino p < 10⁻²⁰ at n = 5,000), but that is
    irrelevant: at large n the **mean** is normal by the Central Limit Theorem.
@@ -383,7 +383,7 @@ deduplicating to one order per customer is a marginal-cost simplification.
 > Source document: `docs/03_data_preparation.md`. Scripts: `src/prepare_data.py`,
 > `src/balance_check.py`. Cleaning **aimed at the experimental question**, not generic EDA.
 
-### 5.1 Chain of transformations (traced in `fase3_transformaciones.csv`)
+### 5.1 Chain of transformations (traced in `phase3_transformations.csv`)
 
 | Step | n before | n after | Δ | Rationale |
 |---|---:|---:|---:|---|
@@ -507,7 +507,7 @@ variance (CV ≈ 1.5). **The intuition is correct in direction but irrelevant in
 | Independence | by design | random assignment + dedup to 1 order/customer | No intra-customer correlation; SUTVA assumed |
 
 The primary test is **Welch's t**: the check shows that under H1 the group variances are not
-equal, exactly the case Welch is designed for. Figure: `f4_01_tcl_normalidad.png`.
+equal, exactly the case Welch is designed for. Figure: `f4_01_clt_normality.png`.
 
 ### 6.4 A/A calibration — 2,000 random partitions
 
@@ -521,7 +521,7 @@ Criterion: a 95% CI of the false-positive rate that contains 0.05 **and** unifor
 | p99.5 winsor AOV | **5.00%** | [4.04%; 5.96%] | 0.93 | ✅ calibrated |
 | log(AOV) | **5.00%** | [4.04%; 5.96%] | 0.72 | ✅ calibrated |
 
-Figure: `f4_02_aa_pvalores.png` (flat p-value histogram). **The pipeline does not generate false
+Figure: `f4_02_aa_pvalues.png` (flat p-value histogram). **The pipeline does not generate false
 positives and the p-values are calibrated.**
 
 ### 6.5 A/B test — diluted effect injected (SEED = 42)
@@ -536,7 +536,7 @@ positives and the p-values are calibrated.**
 
 **All intervals contain the true effect (+5%).** The point estimate lands above 5% because this
 particular *split* has the +1.2% of baseline imbalance described in §5.7. Figure:
-`f4_03_ab_efecto.png`.
+`f4_03_ab_effect.png`.
 
 ### 6.6 Guardrails (Benjamini-Hochberg, no effect injected)
 
@@ -669,7 +669,7 @@ to this sample and is not sold as a general property.
 
 **No interaction is significant.** The **relative** effect is homogeneous across segments,
 consistent with the design (responders are drawn at random). Figure:
-`f5_01_forest_segmentos.png`.
+`f5_01_forest_segments.png`.
 
 > **Why the test is run in `log` and not at the level scale:** the effect is multiplicative, so
 > the **absolute** lift in R$ is mechanically larger in large baskets. A level-scale test would
@@ -733,7 +733,7 @@ In a portfolio project, "deployment" is **communicating the result** to its audi
 
 | Deliverable | File | Audience |
 |---|---|---|
-| Executive summary (1 page) | `docs/resumen_ejecutivo.md` | Non-technical stakeholder |
+| Executive summary (1 page) | `docs/executive_summary.md` | Non-technical stakeholder |
 | Presentation notebook | `notebooks/ab_test_olist.ipynb` | Technical reviewer / recruiter |
 | Repository README | `README.md` | GitHub visitor |
 | LinkedIn post draft | `docs/linkedin_post.md` | Professional network |
@@ -775,7 +775,7 @@ test over 2,000 random 50/50 partitions of the sample. The false-positive rate a
 4.95% for the raw AOV, 5.00% for the winsorized AOV, and 5.00% for the AOV on the log scale, in
 all cases with a 95% confidence interval containing the nominal value of 0.05. The distribution of
 the p-values was indistinguishable from a uniform one (Kolmogorov-Smirnov test, p ≥ 0.53 across
-the three metrics; Figure `f4_02_aa_pvalores.png`). It is concluded that the analysis procedure
+the three metrics; Figure `f4_02_aa_pvalues.png`). It is concluded that the analysis procedure
 **does not generate false positives** and that its p-values are correctly calibrated.
 
 The **a priori power analysis** determined that, with the available sample size (n ≈ 47,000 per
@@ -833,7 +833,7 @@ scale) estimated a +4.79% (p = 1.4·10⁻¹⁴); and the Mann-Whitney test for s
 equally significant (p = 1.8·10⁻¹⁵). The **covariate adjustment** via ANCOVA (regression with
 robust HC3 errors, R² ≈ 0.20) reduced the estimator's standard error by 11.2% and placed the
 estimate at **+5.19%** (95% CI [+3.71%; +6.68%]), closer to the true value. Figure
-`f4_03_ab_efecto.png` summarizes the point and interval estimates.
+`f4_03_ab_effect.png` summarizes the point and interval estimates.
 
 ### 9.5 Guardrail metrics
 
@@ -856,7 +856,7 @@ payment type, macro-region, quarter, and category group), via `treatment × segm
 tests on the log scale with robust HC3 errors and the Benjamini-Hochberg correction. **No test was
 significant** (minimum raw p = 0.14; all adjusted p ≥ 0.68), indicating that the relative effect is
 homogeneous across segments, consistent with the simulation design. Figure
-`f5_01_forest_segmentos.png` shows the per-level estimates, all compatible with the global effect.
+`f5_01_forest_segments.png` shows the per-level estimates, all compatible with the global effect.
 
 As a demonstration of the p-hacking risk, an exploratory sweep of 38 arbitrary sample cuts was then
 performed. On the level scale (R$), five cuts showed a nominally significant interaction —versus
@@ -884,8 +884,8 @@ reachable, and that an effect of +2% or +3% would have led to "ITERATE".
 
 ## 10. Limitations
 
-Consolidated synthesis of the project's three audits (`docs/auditoria_fase1_fase2.md`,
-`docs/auditoria_fase5.md`, `docs/auditoria_global.md`).
+Consolidated synthesis of the project's three audits (`docs/audit_phase1_phase2.md`,
+`docs/audit_phase5.md`, `docs/audit_global.md`).
 
 | # | Limitation | Severity | Intrinsic to the dataset? | Status |
 |---|---|---|---|---|
@@ -1071,15 +1071,15 @@ jupyter notebook notebooks/ab_test_olist.ipynb   # presentation layer (only read
 
 | Figure | Phase | Content |
 |---|---|---|
-| `f2_01_volumen_mensual.png` | 2 | Monthly order volume; stable window |
-| `f2_02_distribucion_aov.png` | 2 | AOV distribution: raw (skew 9.8) vs. log (nearly normal) |
+| `f2_01_monthly_volume.png` | 2 | Monthly order volume; stable window |
+| `f2_02_aov_distribution.png` | 2 | AOV distribution: raw (skew 9.8) vs. log (nearly normal) |
 | `f2_03_guardrails.png` | 2 | `review_score` and orders per customer |
 | `f3_01_balance.png` | 3 | Covariate balance *love-plot* |
-| `f4_01_tcl_normalidad.png` | 4 | Non-normal data; normal mean (CLT) |
-| `f4_02_aa_pvalores.png` | 4 | A/A: flat p-value histogram |
-| `f4_03_ab_efecto.png` | 4 | A/B effect with 95% CI (several methods) |
+| `f4_01_clt_normality.png` | 4 | Non-normal data; normal mean (CLT) |
+| `f4_02_aa_pvalues.png` | 4 | A/A: flat p-value histogram |
+| `f4_03_ab_effect.png` | 4 | A/B effect with 95% CI (several methods) |
 | `f4_04_power_vs_n.png` | 4 | Power vs. n: uniform vs. diluted effect |
-| `f5_01_forest_segmentos.png` | 5 | *Forest plot* of the effect by segment |
+| `f5_01_forest_segments.png` | 5 | *Forest plot* of the effect by segment |
 | `f_mde_breakeven.png` | 4 | Relevance MDE derived from costs |
 
 ### Appendix E — History of audited decisions

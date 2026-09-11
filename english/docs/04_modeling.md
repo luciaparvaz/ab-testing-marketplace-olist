@@ -2,7 +2,7 @@
 
 > CRISP-DM · Phase 4 of 6
 > Reproducible scripts: `src/modeling.py` · `src/mde_cost_model.py` (fixed seeds)
-> → `outputs/tables/fase4_resumen.json`, `mde_cost_model.csv`
+> → `outputs/tables/phase4_summary.json`, `mde_cost_model.csv`
 > Figures: `outputs/figures/f4_01…04.png`, `f_mde_breakeven.png`
 
 In CRISP-DM, "Modeling" here = **the design and execution of the statistical test**: a priori
@@ -58,7 +58,7 @@ compared to the **AOV's natural variance** (CV ≈ 1.5). The intuition is correc
 
 ---
 
-## 4.2 Assumption checks (`f4_01_tcl_normalidad.png`)
+## 4.2 Assumption checks (`f4_01_clt_normality.png`)
 
 | Assumption | Test | Result | Verdict |
 |---|---|---|---|
@@ -85,7 +85,7 @@ Criterion: the 95% CI of the false-positive rate contains 0.05 **and** the p-val
 | p99.5 winsor AOV | **5.00%** | [4.04%; 5.96%] | 0.93 | ✅ calibrated |
 | log(AOV) | **5.00%** | [4.04%; 5.96%] | 0.72 | ✅ calibrated |
 
-See `f4_02_aa_pvalores.png` (flat p-value histogram). **The pipeline does not generate false
+See `f4_02_aa_pvalues.png` (flat p-value histogram). **The pipeline does not generate false
 positives and the p-values are calibrated.** (Note: an earlier run at 1,000 replicates gave a KS
 p = 0.044 for the winsorized variant; it was verified over multiple seeds to be noise —the
 false-positive rate stays at ~5%— and it disappears at 2,000 replicates.)
@@ -94,7 +94,7 @@ false-positive rate stays at ~5%— and it disappears at 2,000 replicates.)
 
 ## 4.4 A/B test — diluted effect injected into the declared assignment (SEED = 42)
 
-`f4_03_ab_efecto.png`
+`f4_03_ab_effect.png`
 
 | Test | AOV lift | 95% CI | p-value | +5% within CI? |
 |---|---:|---:|---:|:--:|

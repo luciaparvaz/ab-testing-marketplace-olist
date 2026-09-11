@@ -1,12 +1,12 @@
 {
-  "parametros": {
+  "parameters": {
     "SEED": 42,
-    "ATE_declarado_pct": 5.0,
-    "MDE_relevancia_pct": 3.0
+    "ATE_declared_pct": 5.0,
+    "MDE_relevance_pct": 3.0
   },
-  "1_resultado_primario": {
+  "1_primary_result": {
     "lift_pct": 5.666,
-    "IC95_lift_pct": [
+    "CI95_lift_pct": [
       3.994,
       7.337
     ],
@@ -16,26 +16,26 @@
     "t_stat": 6.64,
     "n_control": 47280,
     "n_treatment": 47423,
-    "significativo": true,
-    "ci_entero_sobre_MDE": true,
-    "relevante": true
+    "significant": true,
+    "ci_entirely_above_MDE": true,
+    "relevant": true
   },
-  "2_impacto_negocio": {
-    "pedidos_validos_ventana_sin_dedup": 97905,
-    "meses_ventana": 20,
-    "pedidos_por_anio_estimado": 58743,
+  "2_business_impact": {
+    "valid_orders_window_no_dedup": 97905,
+    "window_months": 20,
+    "estimated_orders_per_year": 58743,
     "AOV_base_R$": 137.04,
-    "GMV_mercancia_anual_estimado_R$": 8049993,
-    "uplift_GMV_anual_R$": 456084,
-    "uplift_GMV_anual_IC95_R$": [
+    "GMV_merchandise_annual_estimated_R$": 8049993,
+    "uplift_GMV_annual_R$": 456084,
+    "uplift_GMV_annual_CI95_R$": [
       321514,
       590655
     ],
-    "uplift_ingreso_marketplace_anual_R$_asumiendo_comision_15pct": 68413,
-    "nota": "GMV = merchandise value. The marketplace's revenue is a commission (take rate) on the GMV; 15% is assumed for illustrative purposes. Linear extrapolation of the per-order lift to the historical annual volume."
+    "uplift_marketplace_revenue_annual_R$_assuming_15pct_commission": 68413,
+    "note": "GMV = merchandise value. The marketplace's revenue is a commission (take rate) on the GMV; 15% is assumed for illustrative purposes. Linear extrapolation of the per-order lift to the historical annual volume."
   },
   "3_ancova": {
-    "sin_ajuste": {
+    "unadjusted": {
       "coef_treat_R$": 7.58,
       "lift_pct": 5.666,
       "ci95_pct": [
@@ -44,7 +44,7 @@
       ],
       "se_R$": 1.1411
     },
-    "con_ajuste": {
+    "adjusted": {
       "coef_treat_R$": 6.948,
       "lift_pct": 5.193,
       "ci95_pct": [
@@ -53,31 +53,31 @@
       ],
       "se_R$": 1.013
     },
-    "reduccion_SE_pct": 11.23
+    "SE_reduction_pct": 11.23
   },
-  "4_segmentos": {
-    "segmentos_prespecificados": [
+  "4_segments": {
+    "prespecified_segments": [
       "cesta",
       "payment_type",
       "macro_region",
       "trimestre",
       "cat_grupo"
     ],
-    "test_interaccion": {
+    "interaction_test": {
       "cesta": {
-        "p_bruto": 0.9242,
+        "p_raw": 0.9242,
         "p_BH": 0.9242,
-        "heterogeneidad_significativa_tras_BH": false,
-        "n_por_nivel": {
+        "heterogeneity_significant_after_BH": false,
+        "n_per_level": {
           "1 item": 85416,
           "2+ items": 9287
         }
       },
       "payment_type": {
-        "p_bruto": 0.3766,
+        "p_raw": 0.3766,
         "p_BH": 0.9242,
-        "heterogeneidad_significativa_tras_BH": false,
-        "n_por_nivel": {
+        "heterogeneity_significant_after_BH": false,
+        "n_per_level": {
           "boleto": 18897,
           "credit_card": 71462,
           "debit_card": 1468,
@@ -85,10 +85,10 @@
         }
       },
       "macro_region": {
-        "p_bruto": 0.6801,
+        "p_raw": 0.6801,
         "p_BH": 0.9242,
-        "heterogeneidad_significativa_tras_BH": false,
-        "n_por_nivel": {
+        "heterogeneity_significant_after_BH": false,
+        "n_per_level": {
           "Midwest": 5532,
           "North": 1772,
           "Northeast": 9021,
@@ -97,10 +97,10 @@
         }
       },
       "trimestre": {
-        "p_bruto": 0.7942,
+        "p_raw": 0.7942,
         "p_BH": 0.9242,
-        "heterogeneidad_significativa_tras_BH": false,
-        "n_por_nivel": {
+        "heterogeneity_significant_after_BH": false,
+        "n_per_level": {
           "2017Q1": 5014,
           "2017Q2": 8969,
           "2017Q3": 12029,
@@ -111,10 +111,10 @@
         }
       },
       "cat_grupo": {
-        "p_bruto": 0.1353,
+        "p_raw": 0.1353,
         "p_BH": 0.6764,
-        "heterogeneidad_significativa_tras_BH": false,
-        "n_por_nivel": {
+        "heterogeneity_significant_after_BH": false,
+        "n_per_level": {
           "bed_bath_table": 8850,
           "computers_accessories": 6394,
           "furniture_decor": 5963,
@@ -125,17 +125,17 @@
         }
       }
     },
-    "escala_test": "log(AOV), HC3 Wald -> tests heterogeneity of the RELATIVE effect (%), robust to the between-group heteroscedasticity; at the level scale the multiplicative effect mechanically generates absolute heterogeneity in large baskets",
-    "veredicto": "no significant interaction (neither raw nor after BH) -> the relative effect is HOMOGENEOUS across segments, consistent with the design (random responders). Looking for 'where it works best' without correction would be p-hacking."
+    "test_scale": "log(AOV), HC3 Wald -> tests heterogeneity of the RELATIVE effect (%), robust to the between-group heteroscedasticity; at the level scale the multiplicative effect mechanically generates absolute heterogeneity in large baskets",
+    "verdict": "no significant interaction (neither raw nor after BH) -> the relative effect is HOMOGENEOUS across segments, consistent with the design (random responders). Looking for 'where it works best' without correction would be p-hacking."
   },
   "5_p_hacking": {
-    "n_cortes_exploratorios": 38,
-    "esperados_por_azar_a_0.05": 1.9,
+    "n_exploratory_cuts": 38,
+    "expected_by_chance_at_0.05": 1.9,
     "test": "treat x cut interaction, HC3 Wald",
-    "test_en_NIVEL_(mv_w)": {
-      "nominales_p<0.05": {
+    "test_at_LEVEL_(mv_w)": {
+      "nominal_p<0.05": {
         "n": 5,
-        "cuales": [
+        "which": [
           "category:bed_bath_table",
           "category:health_beauty",
           "freight_q:q1",
@@ -143,35 +143,35 @@
           "freight_q:q4"
         ]
       },
-      "tras_BH": {
+      "after_BH": {
         "n": 3,
-        "cuales": [
+        "which": [
           "category:bed_bath_table",
           "freight_q:q1",
           "freight_q:q4"
         ]
       },
-      "tras_Bonferroni": 2
+      "after_Bonferroni": 2
     },
-    "test_en_LOG_(efecto_relativo)": {
-      "nominales_p<0.05": {
+    "test_at_LOG_(relative_effect)": {
+      "nominal_p<0.05": {
         "n": 2,
-        "cuales": [
+        "which": [
           "category:bed_bath_table",
           "category:health_beauty"
         ]
       },
-      "tras_BH": {
+      "after_BH": {
         "n": 0,
-        "cuales": []
+        "which": []
       },
-      "tras_Bonferroni": 0
+      "after_Bonferroni": 0
     },
-    "leccion": "(1) At LEVEL scale several 'segments where the effect differs' survive even BH and Bonferroni: they are NOT chance, they are a MECHANICAL ARTIFACT of the multiplicative effect (the lift in R$ is larger in large baskets), concentrated in the cuts correlated with size (freight quartiles). (2) At LOG scale (the relative effect, which is the business question) only chance-level nominal findings remain, and NONE survives the correction. Moral: (a) test the correct magnitude (%, not absolute R$), (b) pre-specify segments, (c) correct for multiplicity. Correcting is not enough if the estimand is wrong to begin with."
+    "lesson": "(1) At LEVEL scale several 'segments where the effect differs' survive even BH and Bonferroni: they are NOT chance, they are a MECHANICAL ARTIFACT of the multiplicative effect (the lift in R$ is larger in large baskets), concentrated in the cuts correlated with size (freight quartiles). (2) At LOG scale (the relative effect, which is the business question) only chance-level nominal findings remain, and NONE survives the correction. Moral: (a) test the correct magnitude (%, not absolute R$), (b) pre-specify segments, (c) correct for multiplicity. Correcting is not enough if the estimand is wrong to begin with."
   },
   "6_decision": {
     "decision": "LAUNCH",
-    "justificacion": [
+    "justification": [
       "Primary effect +5.67% (95% CI [3.99, 7.34]), log10(p) = -10.51 -> highly significant.",
       "95% CI entirely above the relevance MDE (+3.0%) -> relevant for the business.",
       "No guardrail degraded (Phase 4, Benjamini-Hochberg).",

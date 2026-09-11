@@ -54,33 +54,33 @@ def test_covariates_balanced(outputs_dir):
 # ---- Phase 4 -----------------------------------------------------------------
 def test_aa_calibration_false_positive_rate(f4):
     for metric in ("merch_value", "merch_value_w", "log_merch"):
-        fpr = f4["3_aa_calibracion"][metric]["tasa_falsos_positivos_alpha_0.05"]
+        fpr = f4["3_aa_calibration"][metric]["false_positive_rate_alpha_0.05"]
         assert 0.035 <= fpr <= 0.065, f"{metric}: FPR={fpr}"
 
 
 def test_assumptions_lead_to_welch(f4):
-    a = f4["2_supuestos"]
-    assert a["normalidad_de_la_media_bootstrap"]["p"] > 0.05      # normal mean (CLT)
-    assert float(a["homocedasticidad_con_efecto_diluido"]["p"]) < 0.05  # variances != under H1
+    a = f4["2_assumptions"]
+    assert a["normality_bootstrap_mean"]["p"] > 0.05      # normal mean (CLT)
+    assert float(a["homoscedasticity_diluted_effect"]["p"]) < 0.05  # variances != under H1
 
 
 def test_power_dilution_penalty_is_small(f4):
-    pen = f4["1_power_analysis"]["crudo"]["penalizacion_potencia_por_dilucion_pp"]
+    pen = f4["1_power_analysis"]["raw"]["power_penalty_from_dilution_pp"]
     assert abs(pen) < 2.0
 
 
-def test_multiseed_crudo_unbiased(f4):
-    ms = f4["8_ab_multiseed"]["crudo"]
-    assert abs(ms["sesgo_pp"]) < 0.3
-    assert 0.90 <= ms["cobertura_IC95_del_+5pct"] <= 0.98
+def test_multiseed_raw_unbiased(f4):
+    ms = f4["8_ab_multiseed"]["raw"]
+    assert abs(ms["bias_pp"]) < 0.3
+    assert 0.90 <= ms["CI95_coverage_of_+5pct"] <= 0.98
 
 
 def test_guardrails_not_degraded(f4):
-    """'bloquea' applies the two-gate rule (significant after BH AND magnitude >= threshold) and is
-    the real field that run_all.py uses to decide; significativo_tras_BH alone must NOT
+    """'blocks' applies the two-gate rule (significant after BH AND magnitude >= threshold) and is
+    the real field that run_all.py uses to decide; significant_after_BH alone must NOT
     govern the decision (see implementation audit, finding 2)."""
     for g in f4["4_ab_test"]["guardrails"].values():
-        assert not g["bloquea"]
+        assert not g["blocks"]
 
 
 def test_g2_uses_same_assignment_as_analytical_table():
@@ -106,18 +106,18 @@ def test_g2_uses_same_assignment_as_analytical_table():
     g2 = modeling.g2_cancellation_guardrail()
     assert g2["control"]["n"] == int(expected.loc["control", "count"])
     assert g2["treatment"]["n"] == int(expected.loc["treatment", "count"])
-    assert g2["control"]["cancelados"] == int(expected.loc["control", "sum"])
-    assert g2["treatment"]["cancelados"] == int(expected.loc["treatment", "sum"])
+    assert g2["control"]["canceled"] == int(expected.loc["control", "sum"])
+    assert g2["treatment"]["canceled"] == int(expected.loc["treatment", "sum"])
 
 
-def test_guardrail_bloquea_is_two_gate_and(f4):
-    """'bloquea' in the real guardrail (run_ab_test) must be exactly significativo_tras_BH AND
-    magnitud_supera_umbral (True if there is no quantified threshold, e.g. G4) — the two-gate
+def test_guardrail_blocks_is_two_gate_and(f4):
+    """'blocks' in the real guardrail (run_ab_test) must be exactly significant_after_BH AND
+    magnitude_exceeds_threshold (True if there is no quantified threshold, e.g. G4) — the two-gate
     rule must live in the decision code, not only in the isolated demonstration function."""
     for g in f4["4_ab_test"]["guardrails"].values():
-        mag = g["magnitud_supera_umbral"]
-        expected = g["significativo_tras_BH"] and (True if mag is None else mag)
-        assert g["bloquea"] == expected
+        mag = g["magnitude_exceeds_threshold"]
+        expected = g["significant_after_BH"] and (True if mag is None else mag)
+        assert g["blocks"] == expected
 
 
 def test_guardrail_thresholds_configured():
@@ -128,35 +128,35 @@ def test_guardrail_thresholds_configured():
 
 
 def test_guardrail_regression_two_gate_rule(f4):
-    escenarios = {s["regresion_inyectada_pts"]: s for s in f4["6_guardrail_regression"]["escenarios"]}
-    assert escenarios[-0.03]["regla_AND_(significativo Y magnitud)"] is False   # does not block
-    assert escenarios[-0.08]["regla_AND_(significativo Y magnitud)"] is True    # does block
+    escenarios = {s["regression_injected_pts"]: s for s in f4["6_guardrail_regression"]["scenarios"]}
+    assert escenarios[-0.03]["rule_AND_(significant_AND_magnitude)"] is False   # does not block
+    assert escenarios[-0.08]["rule_AND_(significant_AND_magnitude)"] is True    # does block
 
 
 def test_heterogeneous_effect_is_detected(f4):
-    het = f4["7_efecto_heterogeneo"]
-    assert het["heterogeneidad_detectada"] is True
-    assert het["lift_en_banda_pct"] > het["lift_fuera_de_banda_pct"]
+    het = f4["7_heterogeneous_effect"]
+    assert het["heterogeneity_detected"] is True
+    assert het["lift_in_band_pct"] > het["lift_outside_band_pct"]
 
 
 # ---- Phase 5 ---------------------------------------------------------------
 def test_primary_result_significant_and_relevant(f5):
-    prim = f5["1_resultado_primario"]
-    assert prim["significativo"] is True
-    assert prim["ci_entero_sobre_MDE"] is True
-    assert prim["relevante"] is True
+    prim = f5["1_primary_result"]
+    assert prim["significant"] is True
+    assert prim["ci_entirely_above_MDE"] is True
+    assert prim["relevant"] is True
     assert 4.0 < prim["lift_pct"] < 8.0
 
 
 def test_no_segment_heterogeneity(f5):
-    for v in f5["4_segmentos"]["test_interaccion"].values():
-        assert v["heterogeneidad_significativa_tras_BH"] is False
+    for v in f5["4_segments"]["interaction_test"].values():
+        assert v["heterogeneity_significant_after_BH"] is False
 
 
 def test_p_hacking_log_scale_is_clean(f5):
-    log = f5["5_p_hacking"]["test_en_LOG_(efecto_relativo)"]
-    assert log["tras_BH"]["n"] == 0
-    assert log["tras_Bonferroni"] == 0
+    log = f5["5_p_hacking"]["test_at_LOG_(relative_effect)"]
+    assert log["after_BH"]["n"] == 0
+    assert log["after_Bonferroni"] == 0
 
 
 def test_decision_is_lanzar(f5):

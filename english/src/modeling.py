@@ -42,7 +42,7 @@ def power_analysis(df: pd.DataFrame) -> dict:
     n2 = int((df.group == "treatment").sum())
     res["n_control"], res["n_treatment"] = n1, n2
 
-    for label, col in [("crudo", "merch_value"), ("winsor_p99.5", "merch_value_w")]:
+    for label, col in [("raw", "merch_value"), ("winsor_p99.5", "merch_value_w")]:
         x = df[col].values
         mu, sd = x.mean(), x.std(ddof=1)
         cv = sd / mu
@@ -69,18 +69,18 @@ def power_analysis(df: pd.DataFrame) -> dict:
         res[label] = {
             "mean": round(mu, 2), "sd": round(sd, 2), "cv": round(cv, 4),
             "mde_rel_detectable_80pct_pct": round(mde_rel * 100, 3),
-            "power_efecto_uniforme_+5pct": round(float(pow_uniform), 4),
-            "power_efecto_diluido_+5pct_ATE": round(pow_diluted, 4),
-            "lift_medio_estimado_sim_pct": round(float(est.mean()) * 100, 3),
-            "sesgo_estimador_pp": round((float(est.mean()) - ATE) * 100, 3),
-            "penalizacion_potencia_por_dilucion_pp": round((float(pow_uniform) - pow_diluted) * 100, 2),
+            "power_uniform_effect_+5pct": round(float(pow_uniform), 4),
+            "power_diluted_effect_+5pct_ATE": round(pow_diluted, 4),
+            "mean_estimated_lift_sim_pct": round(float(est.mean()) * 100, 3),
+            "estimator_bias_pp": round((float(est.mean()) - ATE) * 100, 3),
+            "power_penalty_from_dilution_pp": round((float(pow_uniform) - pow_diluted) * 100, 2),
         }
 
     # --- power vs n curve: does the diluted effect cost power? ----------------
     x = df["merch_value"].values
     cv = x.std(ddof=1) / x.mean()
     grid = [400, 800, 1600, 3200, 6400, 12800, 25600, n1]
-    curve = {"n_por_grupo": grid, "power_uniforme": [], "power_diluido": [], "penalizacion_pp": []}
+    curve = {"n_per_group": grid, "power_uniform": [], "power_diluted": [], "penalty_pp": []}
     rng = np.random.default_rng(99)
     S = 500
     for n in grid:
@@ -94,15 +94,15 @@ def power_analysis(df: pd.DataFrame) -> dict:
             _, p = stats.ttest_ind(xk[g], xk[~g], equal_var=False)
             rej += p < ALPHA
         pd_ = rej / S
-        curve["power_uniforme"].append(round(pu, 4))
-        curve["power_diluido"].append(round(pd_, 4))
-        curve["penalizacion_pp"].append(round((pu - pd_) * 100, 2))
-    res["curva_potencia_vs_n"] = curve
+        curve["power_uniform"].append(round(pu, 4))
+        curve["power_diluted"].append(round(pd_, 4))
+        curve["penalty_pp"].append(round((pu - pd_) * 100, 2))
+    res["power_vs_n_curve"] = curve
 
     fig, ax = plt.subplots(figsize=(7, 3.6))
-    ax.plot(grid, curve["power_uniforme"], "o-", color="#c1121f",
+    ax.plot(grid, curve["power_uniform"], "o-", color="#c1121f",
             label="uniform effect (standard formula)")
-    ax.plot(grid, curve["power_diluido"], "s-", color="#3b6ea5", label="diluted effect (simulated)")
+    ax.plot(grid, curve["power_diluted"], "s-", color="#3b6ea5", label="diluted effect (simulated)")
     ax.axhline(0.80, color="#999", ls=":", lw=1, label="80% power")
     ax.axvline(n1, color="#2a9d8f", ls="--", lw=1, label=f"experiment's n ({n1:,})")
     ax.set_xscale("log")
@@ -141,12 +141,12 @@ def g2_cancellation_guardrail() -> dict:
     from statsmodels.stats.proportion import proportions_ztest
     stat, p = proportions_ztest(tab["sum"].values, tab["count"].values)
     return {
-        "control": {"cancelados": int(tab.loc["control", "sum"]), "n": int(tab.loc["control", "count"]),
-                    "tasa_pct": round(tab.loc["control", "sum"] / tab.loc["control", "count"] * 100, 3)},
-        "treatment": {"cancelados": int(tab.loc["treatment", "sum"]), "n": int(tab.loc["treatment", "count"]),
-                      "tasa_pct": round(tab.loc["treatment", "sum"] / tab.loc["treatment", "count"] * 100, 3)},
+        "control": {"canceled": int(tab.loc["control", "sum"]), "n": int(tab.loc["control", "count"]),
+                    "rate_pct": round(tab.loc["control", "sum"] / tab.loc["control", "count"] * 100, 3)},
+        "treatment": {"canceled": int(tab.loc["treatment", "sum"]), "n": int(tab.loc["treatment", "count"]),
+                      "rate_pct": round(tab.loc["treatment", "sum"] / tab.loc["treatment", "count"] * 100, 3)},
         "z_stat": round(float(stat), 3), "p_value": round(float(p), 4),
-        "nota": "full orders table (includes canceled), but with the SAME control/treatment "
+        "note": "full orders table (includes canceled), but with the SAME control/treatment "
                 "assignment as analytical_table.parquet; no effect injected in guardrails -> no "
                 "degradation is expected",
     }
@@ -188,16 +188,16 @@ def check_assumptions(df: pd.DataFrame) -> dict:
     plt.close(fig)
 
     return {
-        "normalidad_datos_brutos": {"DAgostino_K2": round(k2_raw, 1), "p": float(f"{p_raw:.2e}"),
-                                    "veredicto": "not normal (expected)"},
-        "normalidad_de_la_media_bootstrap": {"DAgostino_K2": round(k2_mean, 3), "p": round(p_mean, 4),
-                                             "veredicto": "compatible with normal -> Welch-t valid"},
-        "homocedasticidad_sin_efecto": {"Levene_stat": round(lev_stat0, 3), "p": round(lev_p0, 4),
-                                        "veredicto": "equal variances (expected in A/A)"},
-        "homocedasticidad_con_efecto_diluido": {"Levene_stat": round(lev_stat1, 2), "p": float(f"{lev_p1:.2e}"),
-                                                "veredicto": "the diluted effect INFLATES the "
+        "normality_raw_data": {"DAgostino_K2": round(k2_raw, 1), "p": float(f"{p_raw:.2e}"),
+                                    "verdict": "not normal (expected)"},
+        "normality_bootstrap_mean": {"DAgostino_K2": round(k2_mean, 3), "p": round(p_mean, 4),
+                                             "verdict": "compatible with normal -> Welch-t valid"},
+        "homoscedasticity_no_effect": {"Levene_stat": round(lev_stat0, 3), "p": round(lev_p0, 4),
+                                        "verdict": "equal variances (expected in A/A)"},
+        "homoscedasticity_diluted_effect": {"Levene_stat": round(lev_stat1, 2), "p": float(f"{lev_p1:.2e}"),
+                                                "verdict": "the diluted effect INFLATES the "
                                                              "treatment's variance -> use Welch, not Student"},
-        "independencia": "by design: random assignment + dedup to 1 order/customer removes "
+        "independence": "by design: random assignment + dedup to 1 order/customer removes "
                          "intra-customer correlation. SUTVA assumed (no interference between customers).",
     }
 
@@ -223,14 +223,14 @@ def aa_calibration(df: pd.DataFrame) -> dict:
         half = 1.96 * np.sqrt(0.05 * 0.95 / N_SIM_AA)
         fpr_ci_ok = (fpr - half) <= 0.05 <= (fpr + half)
         out[label] = {
-            "tasa_falsos_positivos_alpha_0.05": round(fpr, 4),
-            "tasa_esperada": 0.05,
-            "IC95_tasa": [round(fpr - half, 4), round(fpr + half, 4)],
-            "IC95_contiene_0.05": bool(fpr_ci_ok),
-            "KS_vs_uniforme_stat": round(float(ks_stat), 4),
-            "KS_vs_uniforme_p": round(float(ks_p), 4),
+            "false_positive_rate_alpha_0.05": round(fpr, 4),
+            "expected_rate": 0.05,
+            "CI95_rate": [round(fpr - half, 4), round(fpr + half, 4)],
+            "CI95_contains_0.05": bool(fpr_ci_ok),
+            "KS_vs_uniform_stat": round(float(ks_stat), 4),
+            "KS_vs_uniform_p": round(float(ks_p), 4),
             # KS is applied to 3 metrics -> a corrected threshold (0.05/3) is used for "catastrophic"
-            "veredicto": "calibrated" if (fpr_ci_ok and ks_p > 0.0167) else "REVIEW",
+            "verdict": "calibrated" if (fpr_ci_ok and ks_p > 0.0167) else "REVIEW",
         }
 
     # figure: histogram of A/A p-values (primary metric)
@@ -282,11 +282,11 @@ def run_ab_test(df: pd.DataFrame) -> dict:
     df["mv_effect_w"] = np.minimum(df["mv_effect"], cap)
 
     t = df[is_t]; c = df[~is_t]
-    res = {"n_control": len(c), "n_treatment": len(t), "ATE_declarado_pct": ATE * 100}
+    res = {"n_control": len(c), "n_treatment": len(t), "ATE_declared_pct": ATE * 100}
 
     # --- primary result and robustness ---
     primary = {}
-    for label, col in [("Welch_crudo", "mv_effect"), ("Welch_winsor_p99.5", "mv_effect_w")]:
+    for label, col in [("Welch_raw", "mv_effect"), ("Welch_winsor_p99.5", "mv_effect_w")]:
         diff, (lo, hi), dfw = _welch_ci(t[col].values, c[col].values)
         st, p = stats.ttest_ind(t[col].values, c[col].values, equal_var=False)
         base = c[col].mean()
@@ -294,24 +294,24 @@ def run_ab_test(df: pd.DataFrame) -> dict:
             "control": round(base, 2), "treatment": round(t[col].mean(), 2),
             "diff_abs_R$": round(diff, 2),
             "lift_rel_pct": round(diff / base * 100, 3),
-            "IC95_lift_pct": [round(lo / base * 100, 3), round(hi / base * 100, 3)],
+            "CI95_lift_pct": [round(lo / base * 100, 3), round(hi / base * 100, 3)],
             "p_value": float(f"{p:.3e}"), "welch_df": round(dfw, 0),
-            "ATE_5pct_en_IC": bool(lo / base * 100 <= 5.0 <= hi / base * 100),
+            "ATE_5pct_in_CI": bool(lo / base * 100 <= 5.0 <= hi / base * 100),
         }
     # log (ratio of geometric means)
     st, p = stats.ttest_ind(np.log(t["mv_effect"]), np.log(c["mv_effect"]), equal_var=False)
     gm_ratio = np.exp(np.log(t["mv_effect"]).mean() - np.log(c["mv_effect"]).mean()) - 1
     primary["log_geom_ratio"] = {"lift_geom_pct": round(gm_ratio * 100, 3), "p_value": float(f"{p:.3e}"),
-                                 "nota": "ratio of geometric means (~median), NOT the AOV"}
+                                 "note": "ratio of geometric means (~median), NOT the AOV"}
     # Mann-Whitney
     u, p = stats.mannwhitneyu(t["mv_effect"], c["mv_effect"], alternative="two-sided")
     primary["mann_whitney"] = {"U": float(u), "p_value": float(f"{p:.3e}"),
-                               "nota": "stochastic dominance"}
+                               "note": "stochastic dominance"}
     # bootstrap
     boot = _bootstrap_ratio_ci(t["mv_effect"].values, c["mv_effect"].values, rng)
-    primary["bootstrap_ratio"] = {"IC95_lift_pct": [round(boot[0] * 100, 3), round(boot[1] * 100, 3)],
-                                  "nota": "no distributional assumption"}
-    res["primario"] = primary
+    primary["bootstrap_ratio"] = {"CI95_lift_pct": [round(boot[0] * 100, 3), round(boot[1] * 100, 3)],
+                                  "note": "no distributional assumption"}
+    res["primary"] = primary
 
     # --- guardrails (WITHOUT injected effect: should come out flat) ---
     guard = {}
@@ -321,28 +321,28 @@ def run_ab_test(df: pd.DataFrame) -> dict:
     st, p1 = stats.ttest_ind(g1t, g1c, equal_var=False)
     guard["G1_review_score"] = {"control": round(g1c.mean(), 4), "treatment": round(g1t.mean(), 4),
                                 "diff": round(g1t.mean() - g1c.mean(), 4), "p_welch": p1,
-                                "umbral_alarma": "drop >= 0.05 pts"}
+                                "alarm_threshold": "drop >= 0.05 pts"}
     raw_p["G1_review_score"] = p1
     # G2 cancellation rate (full orders table)
     g2 = g2_cancellation_guardrail()
-    guard["G2_cancelacion"] = {"control_pct": g2["control"]["tasa_pct"],
-                               "treatment_pct": g2["treatment"]["tasa_pct"],
-                               "diff_pp": round(g2["treatment"]["tasa_pct"] - g2["control"]["tasa_pct"], 4),
+    guard["G2_cancellation"] = {"control_pct": g2["control"]["rate_pct"],
+                               "treatment_pct": g2["treatment"]["rate_pct"],
+                               "diff_pp": round(g2["treatment"]["rate_pct"] - g2["control"]["rate_pct"], 4),
                                "z_stat": g2["z_stat"], "p_welch": g2["p_value"],
-                               "umbral_alarma": "significant rise"}
-    raw_p["G2_cancelacion"] = g2["p_value"]
+                               "alarm_threshold": "significant rise"}
+    raw_p["G2_cancellation"] = g2["p_value"]
     # G3 freight_value
     st, p3 = stats.ttest_ind(t["freight_value"], c["freight_value"], equal_var=False)
     guard["G3_freight_value"] = {"control": round(c["freight_value"].mean(), 3),
                                  "treatment": round(t["freight_value"].mean(), 3),
                                  "diff": round(t["freight_value"].mean() - c["freight_value"].mean(), 3),
-                                 "p_welch": p3, "umbral_alarma": "significant rise"}
+                                 "p_welch": p3, "alarm_threshold": "significant rise"}
     raw_p["G3_freight_value"] = p3
     # G4 n_items
     st, p4 = stats.ttest_ind(t["n_items"], c["n_items"], equal_var=False)
     guard["G4_n_items"] = {"control": round(c["n_items"].mean(), 4), "treatment": round(t["n_items"].mean(), 4),
                            "diff": round(t["n_items"].mean() - c["n_items"].mean(), 4),
-                           "p_welch": p4, "umbral_alarma": "significant drop"}
+                           "p_welch": p4, "alarm_threshold": "significant drop"}
     raw_p["G4_n_items"] = p4
 
     # --- Benjamini-Hochberg correction over the guardrail family ---
@@ -350,31 +350,31 @@ def run_ab_test(df: pd.DataFrame) -> dict:
     pv = [raw_p[k] for k in keys]
     rej, p_adj, _, _ = multipletests(pv, alpha=ALPHA, method="fdr_bh")
     for k, pa, r in zip(keys, p_adj, rej):
-        guard[k]["p_ajustado_BH"] = float(f"{pa:.4f}")
-        guard[k]["significativo_tras_BH"] = bool(r)
+        guard[k]["p_adjusted_BH"] = float(f"{pa:.4f}")
+        guard[k]["significant_after_BH"] = bool(r)
 
     # --- two-gate rule (significant AND magnitude >= threshold), §1.4 / audit D19 ---
     # G4 has no quantified magnitude threshold in the design ("relevant magnitude") -> it is left
     # with the significance criterion only, explicitly declared (see GUARDRAIL_THRESHOLDS).
     aov_diff_r = primary["Welch_winsor_p99.5"]["diff_abs_R$"]
-    guard["G1_review_score"]["magnitud_supera_umbral"] = bool(
+    guard["G1_review_score"]["magnitude_exceeds_threshold"] = bool(
         guard["G1_review_score"]["diff"] <= -GUARDRAIL_THRESHOLDS["g1_review_score_pts"])
-    guard["G2_cancelacion"]["magnitud_supera_umbral"] = bool(
-        guard["G2_cancelacion"]["diff_pp"] >= GUARDRAIL_THRESHOLDS["g2_cancelacion_pp"])
-    guard["G3_freight_value"]["magnitud_supera_umbral"] = bool(
+    guard["G2_cancellation"]["magnitude_exceeds_threshold"] = bool(
+        guard["G2_cancellation"]["diff_pp"] >= GUARDRAIL_THRESHOLDS["g2_cancelacion_pp"])
+    guard["G3_freight_value"]["magnitude_exceeds_threshold"] = bool(
         guard["G3_freight_value"]["diff"] > 0
         and aov_diff_r > 0
         and guard["G3_freight_value"]["diff"] >= GUARDRAIL_THRESHOLDS["g3_freight_share_of_aov_rise_pct"] / 100 * aov_diff_r)
-    guard["G4_n_items"]["magnitud_supera_umbral"] = None
-    guard["G4_n_items"]["nota_umbral"] = ("no quantified magnitude threshold in the design (§1.4: "
+    guard["G4_n_items"]["magnitude_exceeds_threshold"] = None
+    guard["G4_n_items"]["threshold_note"] = ("no quantified magnitude threshold in the design (§1.4: "
                                           "'relevant magnitude') -> blocks on significance alone, "
                                           "declared as a known limitation")
     for k in keys:
-        mag = guard[k]["magnitud_supera_umbral"]
-        guard[k]["bloquea"] = bool(guard[k]["significativo_tras_BH"] and (True if mag is None else mag))
+        mag = guard[k]["magnitude_exceeds_threshold"]
+        guard[k]["blocks"] = bool(guard[k]["significant_after_BH"] and (True if mag is None else mag))
 
     res["guardrails"] = guard
-    res["guardrails_nota"] = ("G2 (cancellation) is evaluated on the full orders table, not the "
+    res["guardrails_note"] = ("G2 (cancellation) is evaluated on the full orders table, not the "
                               "analytical one (which already filters statuses), but with the SAME "
                               "control/treatment assignment persisted in analytical_table.parquet: the "
                               "inner join against that table excludes customers whose only order in "
@@ -387,17 +387,17 @@ def run_ab_test(df: pd.DataFrame) -> dict:
                               "into the denominator people the experiment never touched; measuring it "
                               "over 'whoever ended up actually assigned' is the correct definition for "
                               "an EXPERIMENT guardrail (implementation audit, finding 1). No effect "
-                              "injected in guardrails -> no degradation is expected. 'bloquea' applies "
+                              "injected in guardrails -> no degradation is expected. 'blocks' applies "
                               "the two-gate rule (significant after BH AND magnitude >= threshold); it "
                               "is the field that any consumer of this decision should read.")
 
     # --- A/B summary figure ---
     fig, ax = plt.subplots(figsize=(7, 3))
     labels = ["Welch raw", "Welch winsor", "bootstrap"]
-    lifts = [primary["Welch_crudo"]["lift_rel_pct"], primary["Welch_winsor_p99.5"]["lift_rel_pct"],
-             np.mean(primary["bootstrap_ratio"]["IC95_lift_pct"])]
-    cis = [primary["Welch_crudo"]["IC95_lift_pct"], primary["Welch_winsor_p99.5"]["IC95_lift_pct"],
-           primary["bootstrap_ratio"]["IC95_lift_pct"]]
+    lifts = [primary["Welch_raw"]["lift_rel_pct"], primary["Welch_winsor_p99.5"]["lift_rel_pct"],
+             np.mean(primary["bootstrap_ratio"]["CI95_lift_pct"])]
+    cis = [primary["Welch_raw"]["CI95_lift_pct"], primary["Welch_winsor_p99.5"]["CI95_lift_pct"],
+           primary["bootstrap_ratio"]["CI95_lift_pct"]]
     y = np.arange(len(labels))
     for i, (l, ci) in enumerate(zip(lifts, cis)):
         ax.plot(ci, [i, i], color="#3b6ea5", lw=2)
@@ -437,12 +437,12 @@ def decision_scenarios(df: pd.DataFrame) -> dict:
             dec = "LAUNCH"
         else:
             dec = "ITERATE"
-        rows.append({"ATE_inyectado_pct": ate_pct, "lift_observado_pct": round(lift, 2),
-                     "IC95_pct": [round(lo_p, 2), round(hi_p, 2)], "p_value": float(f"{p:.2e}"),
+        rows.append({"ATE_injected_pct": ate_pct, "lift_observed_pct": round(lift, 2),
+                     "CI95_pct": [round(lo_p, 2), round(hi_p, 2)], "p_value": float(f"{p:.2e}"),
                      "decision": dec})
-    return {"nota": f"rule §1.5 · relevance MDE = +{MDE_RELEVANCIA}% · guardrails not injected "
+    return {"note": f"rule §1.5 · relevance MDE = +{MDE_RELEVANCIA}% · guardrails not injected "
                     f"(always OK) · this split has +1.2% of baseline imbalance",
-            "escenarios": rows}
+            "scenarios": rows}
 
 
 # ===========================================================================
@@ -467,18 +467,18 @@ def guardrail_regression_scenarios(df: pd.DataFrame) -> dict:
         sig = p < ALPHA
         mag = abs(obs) >= THRESH and obs < 0
         rows.append({
-            "regresion_inyectada_pts": delta,
-            "diff_observada_pts": round(obs, 4),
+            "regression_injected_pts": delta,
+            "diff_observed_pts": round(obs, 4),
             "p_value": float(f"{p:.2e}"),
-            "significativo": bool(sig),
-            "magnitud_>=_0.05": bool(mag),
-            "regla_OR_(significativo O magnitud)": bool(sig or mag),   # original §1.4 rule
-            "regla_AND_(significativo Y magnitud)": bool(sig and mag),  # corrected rule
+            "significant": bool(sig),
+            "magnitude_>=_0.05": bool(mag),
+            "rule_OR_(significant_OR_magnitude)": bool(sig or mag),   # original §1.4 rule
+            "rule_AND_(significant_AND_magnitude)": bool(sig and mag),  # corrected rule
         })
     return {
-        "base_review_control": round(base, 4), "umbral_magnitud_pts": THRESH,
-        "escenarios": rows,
-        "hallazgo": ("at n≈47k ANY real regression is significant (even -0.03). The original "
+        "base_review_control": round(base, 4), "magnitude_threshold_pts": THRESH,
+        "scenarios": rows,
+        "finding": ("at n≈47k ANY real regression is significant (even -0.03). The original "
                      "'significant OR magnitude>=0.05' rule would block the launch over "
                      "sub-threshold noise -> it is corrected to 'significant AND magnitude>=0.05'. "
                      "With the corrected rule: -0.03 does NOT block (correct), -0.08 DOES block "
@@ -514,14 +514,14 @@ def heterogeneous_effect_variant(df: pd.DataFrame) -> dict:
         tt, cc = y[mask & is_t], y[mask & ~is_t]
         return (tt.mean() / cc.mean() - 1) * 100
     return {
-        "umbral_envio_gratis_R$": FREE_SHIP_THRESHOLD,
-        "pct_pedidos_en_banda": round(band.mean() * 100, 1),
+        "free_shipping_threshold_R$": FREE_SHIP_THRESHOLD,
+        "pct_orders_in_band": round(band.mean() * 100, 1),
         "lift_global_pct": round(lift(np.ones(len(y), bool)), 2),
-        "lift_en_banda_pct": round(lift(band), 2),
-        "lift_fuera_de_banda_pct": round(lift(~band), 2),
-        "p_interaccion_cerca_del_umbral_HC3": float(f"{p_inter:.2e}"),
-        "heterogeneidad_detectada": bool(p_inter < ALPHA),
-        "hallazgo": ("with a truly heterogeneous effect (concentrated below the free-shipping "
+        "lift_in_band_pct": round(lift(band), 2),
+        "lift_outside_band_pct": round(lift(~band), 2),
+        "p_interaction_near_threshold_HC3": float(f"{p_inter:.2e}"),
+        "heterogeneity_detected": bool(p_inter < ALPHA),
+        "finding": ("with a truly heterogeneous effect (concentrated below the free-shipping "
                      "threshold), the interaction test DOES detect it (very small p). Contrast with "
                      "the main analysis (homogeneous effect -> no interaction). The design "
                      "distinguishes real heterogeneity from artifacts."),
@@ -549,25 +549,25 @@ def ab_multiseed(df: pd.DataFrame, n_seeds: int = N_SIM_MULTISEED) -> dict:
             lifts[k] = diff / base * 100
             covers[k] = (lo / base * 100) <= 5.0 <= (hi / base * 100)
             rej[k] = stats.ttest_ind(xe[g], xe[~g], equal_var=False)[1] < ALPHA
-        return {"lift_medio_pct": round(float(lifts.mean()), 3),
-                "sesgo_pp": round(float(lifts.mean()) - ATE * 100, 3),
+        return {"mean_lift_pct": round(float(lifts.mean()), 3),
+                "bias_pp": round(float(lifts.mean()) - ATE * 100, 3),
                 "lift_sd_pp": round(float(lifts.std(ddof=1)), 3),
                 "lift_p2.5_p97.5": [round(float(np.percentile(lifts, 2.5)), 2),
                                     round(float(np.percentile(lifts, 97.5)), 2)],
-                "cobertura_IC95_del_+5pct": round(float(covers.mean()), 3),
-                "potencia_empirica": round(float(rej.mean()), 3)}
+                "CI95_coverage_of_+5pct": round(float(covers.mean()), 3),
+                "empirical_power": round(float(rej.mean()), 3)}
 
     crudo, winsor = _run(False), _run(True)
     return {
-        "n_semillas": n_seeds,
-        "crudo": crudo,
+        "n_seeds": n_seeds,
+        "raw": crudo,
         "winsor_p99.5": winsor,
-        "hallazgo": (f"On RAW the estimator is UNBIASED (bias {crudo['sesgo_pp']} pp) and the 95% CI "
-                     f"covers the true value {crudo['cobertura_IC95_del_+5pct']:.0%} of the time "
+        "finding": (f"On RAW the estimator is UNBIASED (bias {crudo['bias_pp']} pp) and the 95% CI "
+                     f"covers the true value {crudo['CI95_coverage_of_+5pct']:.0%} of the time "
                      f"(nominal 95%). WINSORIZATION introduces a small NEGATIVE bias "
-                     f"({winsor['sesgo_pp']} pp) because it clips the treatment's high values more "
+                     f"({winsor['bias_pp']} pp) because it clips the treatment's high values more "
                      f"(multiplicative effect) -> coverage drops to "
-                     f"{winsor['cobertura_IC95_del_+5pct']:.0%}. That is the price of the variance "
+                     f"{winsor['CI95_coverage_of_+5pct']:.0%}. That is the price of the variance "
                      f"reduction; the (LAUNCH) decision is robust because both CIs clear +3%. "
                      f"The +5.7% of the SEED=42 split falls within the p2.5-p97.5 range."),
     }
@@ -604,13 +604,13 @@ def clustered_se_robustness() -> dict:
     r_cl = OLS(o["mv_e"].values, X).fit(cov_type="cluster",
                                        cov_kwds={"groups": o["customer_unique_id"].values})
     return {
-        "n_pedidos_sin_dedup": len(o), "n_clientes": int(o.customer_unique_id.nunique()),
-        "lift_pct_todos_los_pedidos": round(r_cl.params[1] / base * 100, 3),
-        "lift_pct_dedup_1_pedido_cliente_ref": 5.666,
-        "SE_robusto_sin_clustering_R$": round(r_iid.bse[1], 4),
-        "SE_cluster_por_cliente_R$": round(r_cl.bse[1], 4),
-        "inflacion_SE_por_clustering_pct": round((r_cl.bse[1] / r_iid.bse[1] - 1) * 100, 2),
-        "hallazgo": ("with ALL orders + SE clustered by customer, the SE is practically "
+        "n_orders_no_dedup": len(o), "n_customers": int(o.customer_unique_id.nunique()),
+        "lift_pct_all_orders": round(r_cl.params[1] / base * 100, 3),
+        "lift_pct_dedup_1_order_per_customer_ref": 5.666,
+        "SE_robust_no_clustering_R$": round(r_iid.bse[1], 4),
+        "SE_cluster_by_customer_R$": round(r_cl.bse[1], 4),
+        "SE_inflation_from_clustering_pct": round((r_cl.bse[1] / r_iid.bse[1] - 1) * 100, 2),
+        "finding": ("with ALL orders + SE clustered by customer, the SE is practically "
                      "identical to that of the deduplicated version (97% of customers have 1 order "
                      "-> clustering barely inflates the SE, ~1%). The point lift differs slightly "
                      "because it includes ~3,200 extra orders from repeat customers, but the "
@@ -623,16 +623,16 @@ def clustered_se_robustness() -> dict:
 def main():
     df = pd.read_parquet(ANALYTICAL_TABLE)
     report = {
-        "parametros": {"SEED": SEED, "ALPHA": ALPHA, "P_RESP": P_RESP, "DELTA_RESP": DELTA_RESP,
+        "parameters": {"SEED": SEED, "ALPHA": ALPHA, "P_RESP": P_RESP, "DELTA_RESP": DELTA_RESP,
                        "EPS_SD": EPS_SD, "ATE_pct": ATE * 100, "N_SIM_AA": N_SIM_AA,
                        "N_SIM_POWER": N_SIM_POWER, "N_BOOT": N_BOOT},
         "1_power_analysis": power_analysis(df),
-        "2_supuestos": check_assumptions(df),
-        "3_aa_calibracion": aa_calibration(df),
+        "2_assumptions": check_assumptions(df),
+        "3_aa_calibration": aa_calibration(df),
         "4_ab_test": run_ab_test(df),
         "5_decision_scenarios": decision_scenarios(df),
         "6_guardrail_regression": guardrail_regression_scenarios(df),
-        "7_efecto_heterogeneo": heterogeneous_effect_variant(df),
+        "7_heterogeneous_effect": heterogeneous_effect_variant(df),
         "8_ab_multiseed": ab_multiseed(df),
         "9_clustered_se": clustered_se_robustness(),
     }

@@ -116,7 +116,7 @@ print("PRIMARY METRIC — AOV (merchandise value per order)")
 print(f"  n = {aov['n']:,}   mean = R$ {aov['mean']:.2f}   median = R$ {aov['median']:.2f}")
 print(f"  CV = {aov['cv']:.3f}   skew = {aov['skew']:.1f}   excess kurtosis = {aov['kurtosis_excess']:.0f}")
 print(f"  log(AOV): skew = {logaov['skew']:.2f}   kurtosis = {logaov['kurtosis_excess']:.2f}  (robust range)")
-print(f"\n  {f2['pedidos_por_cliente']['pct_clientes_1_pedido']:.1f}% of customers with just 1 order "
+print(f"\n  {f2['orders_per_customer']['pct_customers_1_order']:.1f}% of customers with just 1 order "
       f"-> randomization unit ≈ analysis unit")
 print("  Reading: AOV is highly skewed; at large n the mean is normal by the CLT -> Welch-t primary.")
 display(Image(str(FIGURES / "f2_02_distribucion_aov.png")))
@@ -155,44 +155,44 @@ display(Image(str(FIGURES / "f3_01_balance.png")))
 f4 = rj("fase4_resumen.json")
 pw = f4["1_power_analysis"]
 print("POWER ANALYSIS")
-for k in ("crudo", "winsor_p99.5"):
+for k in ("raw", "winsor_p99.5"):
     r = pw[k]
     print(f"  [{k:12}] detectable MDE at 80% = +{r['mde_rel_detectable_80pct_pct']}%   "
-          f"power(ATE=+5%) = {r['power_efecto_diluido_+5pct_ATE']}   "
-          f"mean lift (1000 sims) = {r['lift_medio_estimado_sim_pct']}%  (bias {r['sesgo_estimador_pp']} pp)")
+          f"power(ATE=+5%) = {r['power_diluted_effect_+5pct_ATE']}   "
+          f"mean lift (1000 sims) = {r['mean_estimated_lift_sim_pct']}%  (bias {r['estimator_bias_pp']} pp)")
 print(f"\n  Power penalty from the diluted effect: "
-      f"{pw['crudo']['penalizacion_potencia_por_dilucion_pp']} pp -> negligible "
+      f"{pw['raw']['power_penalty_from_dilution_pp']} pp -> negligible "
       f"(the AOV's natural variance, CV≈1.5, dominates).")
 display(Image(str(FIGURES / "f4_04_power_vs_n.png")))
 
 # %%
-asm = f4["2_supuestos"]
+asm = f4["2_assumptions"]
 print("ASSUMPTION CHECKS")
-print(f"  Normality of the raw data      : p = {asm['normalidad_datos_brutos']['p']}  (not normal, as expected)")
-print(f"  Normality of the mean (CLT)    : p = {asm['normalidad_de_la_media_bootstrap']['p']}  -> Welch-t valid")
-print(f"  Homoscedasticity WITHOUT effect: Levene p = {asm['homocedasticidad_sin_efecto']['p']}")
-print(f"  Homoscedasticity WITH effect   : Levene p = {asm['homocedasticidad_con_efecto_diluido']['p']}"
+print(f"  Normality of the raw data      : p = {asm['normality_raw_data']['p']}  (not normal, as expected)")
+print(f"  Normality of the mean (CLT)    : p = {asm['normality_bootstrap_mean']['p']}  -> Welch-t valid")
+print(f"  Homoscedasticity WITHOUT effect: Levene p = {asm['homoscedasticity_no_effect']['p']}")
+print(f"  Homoscedasticity WITH effect   : Levene p = {asm['homoscedasticity_diluted_effect']['p']}"
       f"  -> unequal variances under H1 -> use Welch, NOT Student")
 display(Image(str(FIGURES / "f4_01_tcl_normalidad.png")))
 
 # %%
 print("A/A CALIBRATION  (2,000 random partitions, no effect)")
-for k, v in f4["3_aa_calibracion"].items():
-    print(f"  [{k:14}] false positives = {v['tasa_falsos_positivos_alpha_0.05']:.3f}  "
-          f"(95% CI {L(v['IC95_tasa'])})  ·  KS vs. uniform p = {v['KS_vs_uniforme_p']:.3f}  ->  {v['veredicto']}")
+for k, v in f4["3_aa_calibration"].items():
+    print(f"  [{k:14}] false positives = {v['false_positive_rate_alpha_0.05']:.3f}  "
+          f"(95% CI {L(v['CI95_rate'])})  ·  KS vs. uniform p = {v['KS_vs_uniform_p']:.3f}  ->  {v['verdict']}")
 display(Image(str(FIGURES / "f4_02_aa_pvalores.png")))
 
 # %%
-p = f4["4_ab_test"]["primario"]
+p = f4["4_ab_test"]["primary"]
 print("A/B TEST  —  injected diluted effect (SEED=42)")
 print(f"  Welch · winsor AOV : +{p['Welch_winsor_p99.5']['lift_rel_pct']}%  "
-      f"95% CI {L(p['Welch_winsor_p99.5']['IC95_lift_pct'])}%  ·  p = {p['Welch_winsor_p99.5']['p_value']}")
-print(f"  Welch · raw AOV    : +{p['Welch_crudo']['lift_rel_pct']}%  {L(p['Welch_crudo']['IC95_lift_pct'])}%")
-print(f"  bootstrap (10k)    : {L(p['bootstrap_ratio']['IC95_lift_pct'])}%")
-print(f"  the true effect (+5%) is within the CI: {p['Welch_winsor_p99.5']['ATE_5pct_en_IC']}")
+      f"95% CI {L(p['Welch_winsor_p99.5']['CI95_lift_pct'])}%  ·  p = {p['Welch_winsor_p99.5']['p_value']}")
+print(f"  Welch · raw AOV    : +{p['Welch_raw']['lift_rel_pct']}%  {L(p['Welch_raw']['CI95_lift_pct'])}%")
+print(f"  bootstrap (10k)    : {L(p['bootstrap_ratio']['CI95_lift_pct'])}%")
+print(f"  the true effect (+5%) is within the CI: {p['Welch_winsor_p99.5']['ATE_5pct_in_CI']}")
 print("\n  GUARDRAILS (Benjamini-Hochberg):")
 for g, v in f4["4_ab_test"]["guardrails"].items():
-    print(f"    {g:20}  BH-adjusted p = {v['p_ajustado_BH']:.3f}  ->  degraded: {v['significativo_tras_BH']}")
+    print(f"    {g:20}  BH-adjusted p = {v['p_adjusted_BH']:.3f}  ->  degraded: {v['significant_after_BH']}")
 display(Image(str(FIGURES / "f4_03_ab_efecto.png")))
 
 # %% [markdown]
@@ -201,29 +201,29 @@ display(Image(str(FIGURES / "f4_03_ab_efecto.png")))
 # %%
 ms = f4["8_ab_multiseed"]
 print("MULTI-SEED A/B (500 replicates: re-split + re-injection)")
-for k in ("crudo", "winsor_p99.5"):
+for k in ("raw", "winsor_p99.5"):
     m = ms[k]
-    print(f"  [{k:12}] mean lift = {m['lift_medio_pct']}%   bias = {m['sesgo_pp']} pp   "
-          f"95% CI coverage of +5% = {m['cobertura_IC95_del_+5pct']}")
+    print(f"  [{k:12}] mean lift = {m['mean_lift_pct']}%   bias = {m['bias_pp']} pp   "
+          f"95% CI coverage of +5% = {m['CI95_coverage_of_+5pct']}")
 print("  -> RAW is UNBIASED and has nominal coverage; winsorization introduces -0.36 pp of bias.")
 
 gr = f4["6_guardrail_regression"]
 print("\nREGRESSION INJECTED INTO G1 (two-gate rule: significant AND magnitude >= 0.05)")
-for s in gr["escenarios"]:
-    print(f"  injected {s['regresion_inyectada_pts']:+.2f} pts -> p={s['p_value']:.1e}   "
-          f"blocks (AND rule): {s['regla_AND_(significativo Y magnitud)']}")
+for s in gr["scenarios"]:
+    print(f"  injected {s['regression_injected_pts']:+.2f} pts -> p={s['p_value']:.1e}   "
+          f"blocks (AND rule): {s['rule_AND_(significant_AND_magnitude)']}")
 print("  -> at large n EVERYTHING is significant; the rule needs the magnitude gate.")
 
-het = f4["7_efecto_heterogeneo"]
-print(f"\nVARIANT WITH A REAL HETEROGENEOUS EFFECT (concentrated below R$ {het['umbral_envio_gratis_R$']:.0f})")
-print(f"  lift within band = {het['lift_en_banda_pct']}%   outside = {het['lift_fuera_de_banda_pct']}%   "
-      f"interaction p = {het['p_interaccion_cerca_del_umbral_HC3']}")
+het = f4["7_heterogeneous_effect"]
+print(f"\nVARIANT WITH A REAL HETEROGENEOUS EFFECT (concentrated below R$ {het['free_shipping_threshold_R$']:.0f})")
+print(f"  lift within band = {het['lift_in_band_pct']}%   outside = {het['lift_outside_band_pct']}%   "
+      f"interaction p = {het['p_interaction_near_threshold_HC3']}")
 print("  -> the segment analysis DOES detect heterogeneity when it exists.")
 
 cl = f4["9_clustered_se"]
 print("\nALL ORDERS + CUSTOMER-CLUSTERED SE")
-print(f"  lift = {cl['lift_pct_todos_los_pedidos']}%  (dedup: {cl['lift_pct_dedup_1_pedido_cliente_ref']}%)   "
-      f"·  clustering inflates the SE by only {cl['inflacion_SE_por_clustering_pct']}%")
+print(f"  lift = {cl['lift_pct_all_orders']}%  (dedup: {cl['lift_pct_dedup_1_order_per_customer_ref']}%)   "
+      f"·  clustering inflates the SE by only {cl['SE_inflation_from_clustering_pct']}%")
 
 # %% [markdown]
 # ### Phase 4 · relevance MDE derived from a cost model
@@ -242,29 +242,29 @@ display(Image(str(FIGURES / "f_mde_breakeven.png")))
 
 # %%
 f5 = rj("fase5_resumen.json")
-prim, imp, anc = f5["1_resultado_primario"], f5["2_impacto_negocio"], f5["3_ancova"]
+prim, imp, anc = f5["1_primary_result"], f5["2_business_impact"], f5["3_ancova"]
 print("SIGNIFICANCE vs RELEVANCE")
-print(f"  Primary effect  : +{prim['lift_pct']}%   95% CI {L(prim['IC95_lift_pct'])}%   log10(p) = {prim['log10_p']}")
-print(f"  Significant?    : {prim['significativo']}")
-print(f"  CI entirely above the +3% MDE?  : {prim['ci_entero_sobre_MDE']}   ->  RELEVANT: {prim['relevante']}")
-print(f"\n  ANCOVA (covariate adjustment): +{anc['con_ajuste']['lift_pct']}%  "
-      f"95% CI {L(anc['con_ajuste']['ci95_pct'])}%  ·  SE -{anc['reduccion_SE_pct']}%")
+print(f"  Primary effect  : +{prim['lift_pct']}%   95% CI {L(prim['CI95_lift_pct'])}%   log10(p) = {prim['log10_p']}")
+print(f"  Significant?    : {prim['significant']}")
+print(f"  CI entirely above the +3% MDE?  : {prim['ci_entirely_above_MDE']}   ->  RELEVANT: {prim['relevant']}")
+print(f"\n  ANCOVA (covariate adjustment): +{anc['adjusted']['lift_pct']}%  "
+      f"95% CI {L(anc['adjusted']['ci95_pct'])}%  ·  SE -{anc['SE_reduction_pct']}%")
 print("\nESTIMATED ECONOMIC IMPACT")
-print(f"  Merchandise GMV uplift : +R$ {imp['uplift_GMV_anual_R$']:,}/year  "
-      f"(CI [{imp['uplift_GMV_anual_IC95_R$'][0]:,}, {imp['uplift_GMV_anual_IC95_R$'][1]:,}])")
-print(f"  ≈ +R$ {imp['uplift_ingreso_marketplace_anual_R$_asumiendo_comision_15pct']:,}/year of commission (15%)")
+print(f"  Merchandise GMV uplift : +R$ {imp['uplift_GMV_annual_R$']:,}/year  "
+      f"(CI [{imp['uplift_GMV_annual_CI95_R$'][0]:,}, {imp['uplift_GMV_annual_CI95_R$'][1]:,}])")
+print(f"  ≈ +R$ {imp['uplift_marketplace_revenue_annual_R$_assuming_15pct_commission']:,}/year of commission (15%)")
 
 # %%
 print("PRE-SPECIFIED SEGMENTS — log(AOV) interaction, HC3 Wald, + Benjamini-Hochberg")
-for k, v in f5["4_segmentos"]["test_interaccion"].items():
-    print(f"  {k:14}  raw p = {v['p_bruto']:.3f}   BH p = {v['p_BH']:.3f}   "
-          f"heterogeneous: {v['heterogeneidad_significativa_tras_BH']}")
+for k, v in f5["4_segments"]["interaction_test"].items():
+    print(f"  {k:14}  raw p = {v['p_raw']:.3f}   BH p = {v['p_BH']:.3f}   "
+          f"heterogeneous: {v['heterogeneity_significant_after_BH']}")
 print("\nP-HACKING — 38 exploratory cuts (expected by chance ≈ 1.9)")
 ph = f5["5_p_hacking"]
-for esc in ("test_en_NIVEL_(mv_w)", "test_en_LOG_(efecto_relativo)"):
+for esc in ("test_at_LEVEL_(mv_w)", "test_at_LOG_(relative_effect)"):
     s = ph[esc]
-    print(f"  {esc:32}  nominal = {s['nominales_p<0.05']['n']}   after BH = {s['tras_BH']['n']}   "
-          f"after Bonferroni = {s['tras_Bonferroni']}")
+    print(f"  {esc:32}  nominal = {s['nominal_p<0.05']['n']}   after BH = {s['after_BH']['n']}   "
+          f"after Bonferroni = {s['after_Bonferroni']}")
 print("  -> on the wrong scale (level) the artifacts of the multiplicative effect survive")
 print("     Bonferroni; on the correct scale (log) nothing survives. Correcting does not save a bad estimand.")
 display(Image(str(FIGURES / "f5_01_forest_segmentos.png")))
@@ -274,7 +274,7 @@ dec = f5["6_decision"]
 print("=" * 60)
 print(f"  PRODUCT DECISION:  {dec['decision']}")
 print("=" * 60)
-for j in dec["justificacion"]:
+for j in dec["justification"]:
     print(f"  • {j}")
 print("\n  Caveats:")
 for cv in dec["caveats"]:

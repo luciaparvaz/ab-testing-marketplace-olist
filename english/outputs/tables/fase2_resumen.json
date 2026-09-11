@@ -29,7 +29,7 @@
     "purchase_min": "2016-09-04 21:15:19",
     "purchase_max": "2018-10-17 17:30:18"
   },
-  "orders_por_mes": {
+  "orders_per_month": {
     "2016-09-01": 4,
     "2016-10-01": 324,
     "2016-11-01": 0,
@@ -67,7 +67,7 @@
     "created": 5,
     "approved": 2
   },
-  "nulos_orders": {
+  "nulls_orders": {
     "order_id": 0,
     "customer_id": 0,
     "order_status": 0,
@@ -77,19 +77,19 @@
     "order_delivered_customer_date": 2965,
     "order_estimated_delivery_date": 0
   },
-  "dup_order_id_en_orders": 0,
+  "dup_order_id_in_orders": 0,
   "dup_review_id": 814,
-  "dup_order_id_en_reviews": 551,
-  "pedidos_sin_items": 775,
-  "pedidos_sin_items_por_status": {
+  "dup_order_id_in_reviews": 551,
+  "orders_without_items": 775,
+  "orders_without_items_by_status": {
     "unavailable": 603,
     "canceled": 164,
     "created": 5,
     "invoiced": 2,
     "shipped": 1
   },
-  "n_pedidos_validos": 98199,
-  "n_clientes_unicos_validos": 94983,
+  "n_valid_orders": 98199,
+  "n_unique_valid_customers": 94983,
   "AOV_merch_value": {
     "n": 98199,
     "mean": 137.418922188617,
@@ -107,7 +107,7 @@
     "skew": 9.771523703301416,
     "kurtosis_excess": 271.3948590014974
   },
-  "AOV_con_flete": {
+  "AOV_with_freight": {
     "n": 98199,
     "mean": 160.24121457448652,
     "std": 219.1111660803925,
@@ -141,7 +141,7 @@
     "skew": 12.098484146134654,
     "kurtosis_excess": 568.4387345101663
   },
-  "n_items_por_pedido": {
+  "n_items_per_order": {
     "n": 98199,
     "mean": 1.1415696697522377,
     "std": 0.5375557223370698,
@@ -175,13 +175,13 @@
     "skew": 0.24242274756355792,
     "kurtosis_excess": 0.3346270899174506
   },
-  "pedidos_por_cliente": {
-    "clientes": 94983,
-    "con_1_pedido": 92096,
-    "con_2+_pedidos": 2887,
-    "pct_clientes_1_pedido": 96.96050872261353,
-    "pct_pedidos_de_clientes_recurrentes": 6.214930905610037,
-    "max_pedidos_un_cliente": 16
+  "orders_per_customer": {
+    "customers": 94983,
+    "with_1_order": 92096,
+    "with_2+_orders": 2887,
+    "pct_customers_1_order": 96.96050872261353,
+    "pct_orders_from_repeat_customers": 6.214930905610037,
+    "max_orders_one_customer": 16
   },
   "review_coverage_pct": 99.25457489383803,
   "review_score_dist": {
@@ -208,7 +208,7 @@
     "skew": -1.4152845444337752,
     "kurtosis_excess": 0.695709048641187
   },
-  "tasa_cancelacion_pct_global": 0.6285133898492574,
+  "global_cancellation_rate_pct": 0.6285133898492574,
   "payment_value_stats": {
     "n": 98198,
     "mean": 160.2702901281085,
@@ -234,11 +234,11 @@
     "not_defined": 3
   },
   "power_preview": {
-    "n_pedidos_validos": 98199,
-    "n_por_grupo_50_50": 49099,
+    "n_valid_orders": 98199,
+    "n_per_group_50_50": 49099,
     "cv_AOV_merch": 1.523126619878331,
     "cohen_d_detectable_80pct": 0.017880733781980497,
-    "lift_relativo_detectable_80pct_pct": 2.723462160629224,
-    "nota": "preliminary, using a normal-approximation t-test; Phase 4 uses bootstrap/Welch over the real distribution"
+    "relative_lift_detectable_80pct_pct": 2.723462160629224,
+    "note": "preliminary, using a normal-approximation t-test; Phase 4 uses bootstrap/Welch over the real distribution"
   }
 }

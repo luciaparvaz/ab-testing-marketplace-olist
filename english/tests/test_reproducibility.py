@@ -47,7 +47,7 @@ def test_primary_matches_committed_result(analytical_df, outputs_dir):
     import json
     lift, p = _primary_lift(analytical_df)
     f5 = json.loads((outputs_dir / "fase5_resumen.json").read_text(encoding="utf-8"))
-    committed = f5["1_resultado_primario"]["lift_pct"]
+    committed = f5["1_primary_result"]["lift_pct"]
     assert abs(lift * 100 - committed) < 0.01
     assert p < 1e-6
 
@@ -60,5 +60,5 @@ def test_modeling_main_is_idempotent():
     r1 = json.loads((config.OUT_TABLES / "fase4_resumen.json").read_text(encoding="utf-8"))
     modeling.main()
     r2 = json.loads((config.OUT_TABLES / "fase4_resumen.json").read_text(encoding="utf-8"))
-    assert r1["4_ab_test"]["primario"] == r2["4_ab_test"]["primario"]
-    assert r1["3_aa_calibracion"] == r2["3_aa_calibracion"]
+    assert r1["4_ab_test"]["primary"] == r2["4_ab_test"]["primary"]
+    assert r1["3_aa_calibration"] == r2["3_aa_calibration"]

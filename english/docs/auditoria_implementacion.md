@@ -41,13 +41,18 @@ magnitude, not a simple relabeling of groups. The reason is that the `inner join
 they never had a valid order, so they were never really assigned to a group, and should not count
 in an experiment guardrail. Before, the guardrail measured cancellation over **everyone who bought
 in the window** (a figure close to the Phase 2 global cancellation rate, 0.63%,
-`fase2_resumen.json :: tasa_cancelacion_pct_global`); it now measures cancellation over **whoever
+`fase2_resumen.json :: global_cancellation_rate_pct`); it now measures cancellation over **whoever
 was actually assigned to the experiment**, which by construction excludes anyone who only
 canceled. These are different populations by design — mixing in people the experiment never
 touched would artificially inflate the base rate and dilute any real degradation signal — and this
 is the methodologically correct definition for an experiment guardrail, not an inconsistency
-between the old and new version. It is documented in `fase4_resumen.json`'s own `guardrails_nota`
+between the old and new version. It is documented in `fase4_resumen.json`'s own `guardrails_note`
 field so that anyone comparing both numbers has the context without having to read the code.
+
+*(Field names below are the ones used in `english/src/`, which are the English translations of
+the Spanish field names in `src/` — e.g. `significant_after_BH` corresponds to
+`significativo_tras_BH` in the Spanish codebase. Both versions are functionally identical; see
+`docs/auditoria_implementacion.md` for the Spanish field names.)*
 
 **Regression test:** `tests/test_outputs.py :: test_g2_uses_same_assignment_as_analytical_table`
 independently recomputes control/treatment (a direct customer→group merge) and compares it against
@@ -61,8 +66,8 @@ what the real function returns.
 regression in a guardrail comes out significant, and corrected the rule to "significant **AND**
 magnitude ≥ threshold". That fix was demonstrated in `guardrail_regression_scenarios()` — an
 isolated, purely illustrative function. The real evaluation, `run_ab_test()` →
-`guard[k]["significativo_tras_BH"]`, and `run_all.py`'s reproducibility report
-(`guard_ok = all(not g["significativo_tras_BH"] ...)`), **never applied any magnitude criterion**.
+`guard[k]["significant_after_BH"]`, and `run_all.py`'s reproducibility report
+(`guard_ok = all(not g["significant_after_BH"] ...)`), **never applied any magnitude criterion**.
 The "AND" rule was demonstrated in a JSON that no one read to make the decision.
 
 **Fix applied.**
@@ -72,14 +77,14 @@ The "AND" rule was demonstrated in a JSON that no one read to make the decision.
   it is explicitly left with only the significance criterion, declared as a known limitation
   instead of inventing an unfounded threshold.
 - `config.py` exposes `GUARDRAIL_THRESHOLDS`, following the single-source-of-truth rule.
-- `run_ab_test()` computes `magnitud_supera_umbral` and `bloquea = significativo_tras_BH AND
-  magnitud_supera_umbral` for each guardrail — this is now the field any consumer of the decision
-  must read.
-- `run_all.py::reproducibility_report()` checks `not g["bloquea"]` instead of
-  `not g["significativo_tras_BH"]`.
+- `run_ab_test()` computes `magnitude_exceeds_threshold` and `blocks = significant_after_BH AND
+  magnitude_exceeds_threshold` for each guardrail — this is now the field any consumer of the
+  decision must read.
+- `run_all.py::reproducibility_report()` checks `not g["blocks"]` instead of
+  `not g["significant_after_BH"]`.
 
-**Regression test:** `test_guardrail_bloquea_is_two_gate_and` verifies that `bloquea` is exactly the
-declared AND; `test_guardrails_not_degraded` was updated to check `bloquea` (the field that
+**Regression test:** `test_guardrail_blocks_is_two_gate_and` verifies that `blocks` is exactly the
+declared AND; `test_guardrails_not_degraded` was updated to check `blocks` (the field that
 actually governs the decision) instead of bare significance.
 
 ---

@@ -48,25 +48,25 @@ def reproducibility_report() -> bool:
     srm = _load_csv_dict(config.OUT_TABLES / "fase3_srm.csv")
     bal = pd.read_csv(config.OUT_TABLES / "fase3_balance.csv")
 
-    aa = f4["3_aa_calibracion"]["merch_value"]["tasa_falsos_positivos_alpha_0.05"]
-    prim = f5["1_resultado_primario"]
+    aa = f4["3_aa_calibration"]["merch_value"]["false_positive_rate_alpha_0.05"]
+    prim = f5["1_primary_result"]
     # two-gate rule (significant after BH AND magnitude >= threshold) — see modeling.py::run_ab_test
-    guard_ok = all(not g["bloquea"] for g in f4["4_ab_test"]["guardrails"].values())
-    ms = f4["8_ab_multiseed"]["crudo"]
+    guard_ok = all(not g["blocks"] for g in f4["4_ab_test"]["guardrails"].values())
+    ms = f4["8_ab_multiseed"]["raw"]
 
     checks = [
         ("decision == LAUNCH", f5["6_decision"]["decision"] == "LAUNCH"),
         ("A/A: false positives in [0.035, 0.065]", 0.035 <= aa <= 0.065),
-        ("A/B primary: significant", prim["significativo"]),
-        ("A/B primary: 95% CI above the MDE", prim["relevante"]),
-        ("A/B multi-seed (raw): |bias| < 0.3 pp", abs(ms["sesgo_pp"]) < 0.3),
-        ("A/B multi-seed (raw): CI coverage in [0.90, 0.98]", 0.90 <= ms["cobertura_IC95_del_+5pct"] <= 0.98),
+        ("A/B primary: significant", prim["significant"]),
+        ("A/B primary: 95% CI above the MDE", prim["relevant"]),
+        ("A/B multi-seed (raw): |bias| < 0.3 pp", abs(ms["bias_pp"]) < 0.3),
+        ("A/B multi-seed (raw): CI coverage in [0.90, 0.98]", 0.90 <= ms["CI95_coverage_of_+5pct"] <= 0.98),
         ("no SRM (p > 0.01)", float(srm["p_value"]) > 0.01),
         ("all covariates balanced", bool(bal["balanceada"].all())),
         ("guardrails: none blocks the launch (two-gate rule)", guard_ok),
         ("homogeneous effect across segments (no interaction after BH)",
-         all(not v["heterogeneidad_significativa_tras_BH"]
-             for v in f5["4_segmentos"]["test_interaccion"].values())),
+         all(not v["heterogeneity_significant_after_BH"]
+             for v in f5["4_segments"]["interaction_test"].values())),
     ]
 
     print("\n" + "=" * 64)
@@ -75,10 +75,10 @@ def reproducibility_report() -> bool:
     for label, ok in checks:
         print(f"  [{'OK   ' if ok else 'FAIL '}] {label}")
     print("-" * 64)
-    print(f"  A/B effect (winsor): +{f5['1_resultado_primario']['lift_pct']}%  "
-          f"95% CI {f5['1_resultado_primario']['IC95_lift_pct']}  ·  decision: {f5['6_decision']['decision']}")
+    print(f"  A/B effect (winsor): +{f5['1_primary_result']['lift_pct']}%  "
+          f"95% CI {f5['1_primary_result']['CI95_lift_pct']}  ·  decision: {f5['6_decision']['decision']}")
     print(f"  A/A false positives: {aa:.3f}  ·  SRM p: {srm['p_value']}  ·  "
-          f"multi-seed raw bias: {ms['sesgo_pp']} pp")
+          f"multi-seed raw bias: {ms['bias_pp']} pp")
     return all(ok for _, ok in checks)
 
 

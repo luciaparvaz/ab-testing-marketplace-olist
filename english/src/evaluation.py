@@ -116,7 +116,7 @@ def welch_lift(t: np.ndarray, c: np.ndarray, alpha=ALPHA) -> dict:
 def main():
     df = load_with_effect()
     is_t = df.group == "treatment"
-    out = {"parametros": {"SEED": SEED, "ATE_declarado_pct": ATE * 100, "MDE_relevancia_pct": MDE_RELEVANCIA}}
+    out = {"parameters": {"SEED": SEED, "ATE_declared_pct": ATE * 100, "MDE_relevance_pct": MDE_RELEVANCIA}}
 
     # ---- 1-2. primary result + relevance + R$ impact --------------
     prim = welch_lift(df.loc[is_t, "mv_w"].values, df.loc[~is_t, "mv_w"].values)
@@ -135,29 +135,29 @@ def main():
     base_aov = df.loc[~is_t, "merch_value"].mean()
     gmv_year = n_orders_year * base_aov
     uplift_gmv_year = gmv_year * prim["lift_pct"] / 100
-    out["1_resultado_primario"] = {
+    out["1_primary_result"] = {
         "lift_pct": round(prim["lift_pct"], 3),
-        "IC95_lift_pct": [round(prim["ci_lo"], 3), round(prim["ci_hi"], 3)],
+        "CI95_lift_pct": [round(prim["ci_lo"], 3), round(prim["ci_hi"], 3)],
         "diff_abs_R$": round(prim["base"] * prim["lift_pct"] / 100, 2),
         "p_value": "underflow (< 1e-15)" if prim["p"] == 0 else float(f"{prim['p']:.2e}"),
         "log10_p": prim["log10_p"], "t_stat": prim["t_stat"],
         "n_control": prim["n_c"], "n_treatment": prim["n_t"],
-        "significativo": bool(prim["p"] < ALPHA),
-        "ci_entero_sobre_MDE": bool(prim["ci_lo"] > MDE_RELEVANCIA),
-        "relevante": bool(prim["p"] < ALPHA and prim["ci_lo"] > MDE_RELEVANCIA),
+        "significant": bool(prim["p"] < ALPHA),
+        "ci_entirely_above_MDE": bool(prim["ci_lo"] > MDE_RELEVANCIA),
+        "relevant": bool(prim["p"] < ALPHA and prim["ci_lo"] > MDE_RELEVANCIA),
     }
     from config import COST_MODEL
     COMMISSION = COST_MODEL["commission"]  # assumed marketplace take rate
-    out["2_impacto_negocio"] = {
-        "pedidos_validos_ventana_sin_dedup": n_orders_window, "meses_ventana": n_months,
-        "pedidos_por_anio_estimado": round(n_orders_year),
+    out["2_business_impact"] = {
+        "valid_orders_window_no_dedup": n_orders_window, "window_months": n_months,
+        "estimated_orders_per_year": round(n_orders_year),
         "AOV_base_R$": round(base_aov, 2),
-        "GMV_mercancia_anual_estimado_R$": round(gmv_year),
-        "uplift_GMV_anual_R$": round(uplift_gmv_year),
-        "uplift_GMV_anual_IC95_R$": [round(gmv_year * prim["ci_lo"] / 100),
+        "GMV_merchandise_annual_estimated_R$": round(gmv_year),
+        "uplift_GMV_annual_R$": round(uplift_gmv_year),
+        "uplift_GMV_annual_CI95_R$": [round(gmv_year * prim["ci_lo"] / 100),
                                      round(gmv_year * prim["ci_hi"] / 100)],
-        "uplift_ingreso_marketplace_anual_R$_asumiendo_comision_15pct": round(uplift_gmv_year * COMMISSION),
-        "nota": ("GMV = merchandise value. The marketplace's revenue is a commission (take rate) "
+        "uplift_marketplace_revenue_annual_R$_assuming_15pct_commission": round(uplift_gmv_year * COMMISSION),
+        "note": ("GMV = merchandise value. The marketplace's revenue is a commission (take rate) "
                  "on the GMV; 15% is assumed for illustrative purposes. Linear extrapolation of the "
                  "per-order lift to the historical annual volume."),
     }
@@ -173,13 +173,13 @@ def main():
     b0, se0, lo0, hi0 = _coef(r0, n0, "treat")
     b1, se1, lo1, hi1 = _coef(r1, n1, "treat")
     out["3_ancova"] = {
-        "sin_ajuste": {"coef_treat_R$": round(b0, 3), "lift_pct": round(b0 / base * 100, 3),
+        "unadjusted": {"coef_treat_R$": round(b0, 3), "lift_pct": round(b0 / base * 100, 3),
                        "ci95_pct": [round(lo0 / base * 100, 3), round(hi0 / base * 100, 3)],
                        "se_R$": round(se0, 4)},
-        "con_ajuste": {"coef_treat_R$": round(b1, 3), "lift_pct": round(b1 / base * 100, 3),
+        "adjusted": {"coef_treat_R$": round(b1, 3), "lift_pct": round(b1 / base * 100, 3),
                        "ci95_pct": [round(lo1 / base * 100, 3), round(hi1 / base * 100, 3)],
                        "se_R$": round(se1, 4)},
-        "reduccion_SE_pct": round((1 - se1 / se0) * 100, 2),
+        "SE_reduction_pct": round((1 - se1 / se0) * 100, 2),
     }
 
     # ---- 4. pre-specified segments: forest + interaction ----------
@@ -204,17 +204,17 @@ def main():
     keys = list(inter_p)
     rej, p_adj, _, _ = multipletests([inter_p[k] for k in keys], alpha=ALPHA, method="fdr_bh")
     seg_n = {s: df.groupby(s).size().to_dict() for s in PRESPEC_SEGMENTS}
-    out["4_segmentos"] = {
-        "segmentos_prespecificados": PRESPEC_SEGMENTS,
-        "test_interaccion": {k: {"p_bruto": round(inter_p[k], 4), "p_BH": round(pa, 4),
-                                 "heterogeneidad_significativa_tras_BH": bool(r),
-                                 "n_por_nivel": seg_n[k]}
+    out["4_segments"] = {
+        "prespecified_segments": PRESPEC_SEGMENTS,
+        "interaction_test": {k: {"p_raw": round(inter_p[k], 4), "p_BH": round(pa, 4),
+                                 "heterogeneity_significant_after_BH": bool(r),
+                                 "n_per_level": seg_n[k]}
                              for k, pa, r in zip(keys, p_adj, rej)},
-        "escala_test": "log(AOV), HC3 Wald -> tests heterogeneity of the RELATIVE effect (%), "
+        "test_scale": "log(AOV), HC3 Wald -> tests heterogeneity of the RELATIVE effect (%), "
                        "robust to the between-group heteroscedasticity; at the level scale the "
                        "multiplicative effect mechanically generates absolute heterogeneity in "
                        "large baskets",
-        "veredicto": ("no significant interaction (neither raw nor after BH) -> the relative effect "
+        "verdict": ("no significant interaction (neither raw nor after BH) -> the relative effect "
                       "is HOMOGENEOUS across segments, consistent with the design (random "
                       "responders). Looking for 'where it works best' without correction would be "
                       "p-hacking."),
@@ -250,18 +250,18 @@ def main():
     def _summ(pv):
         bh = multipletests(pv, alpha=ALPHA, method="fdr_bh")[0]
         bf = multipletests(pv, alpha=ALPHA, method="bonferroni")[0]
-        return {"nominales_p<0.05": {"n": int((pv < 0.05).sum()),
-                                     "cuales": [names[i] for i in np.where(pv < 0.05)[0]]},
-                "tras_BH": {"n": int(bh.sum()), "cuales": [names[i] for i in np.where(bh)[0]]},
-                "tras_Bonferroni": int(bf.sum())}
+        return {"nominal_p<0.05": {"n": int((pv < 0.05).sum()),
+                                     "which": [names[i] for i in np.where(pv < 0.05)[0]]},
+                "after_BH": {"n": int(bh.sum()), "which": [names[i] for i in np.where(bh)[0]]},
+                "after_Bonferroni": int(bf.sum())}
 
     out["5_p_hacking"] = {
-        "n_cortes_exploratorios": len(names),
-        "esperados_por_azar_a_0.05": round(0.05 * len(names), 1),
+        "n_exploratory_cuts": len(names),
+        "expected_by_chance_at_0.05": round(0.05 * len(names), 1),
         "test": "treat x cut interaction, HC3 Wald",
-        "test_en_NIVEL_(mv_w)": _summ(p_level),
-        "test_en_LOG_(efecto_relativo)": _summ(p_log),
-        "leccion": ("(1) At LEVEL scale several 'segments where the effect differs' survive even "
+        "test_at_LEVEL_(mv_w)": _summ(p_level),
+        "test_at_LOG_(relative_effect)": _summ(p_log),
+        "lesson": ("(1) At LEVEL scale several 'segments where the effect differs' survive even "
                     "BH and Bonferroni: they are NOT chance, they are a MECHANICAL ARTIFACT of the "
                     "multiplicative effect (the lift in R$ is larger in large baskets), concentrated "
                     "in the cuts correlated with size (freight quartiles). "
@@ -293,17 +293,17 @@ def main():
     plt.close(fig)
 
     # ---- 6. decision --------------------------------------------
-    dec = "LAUNCH" if out["1_resultado_primario"]["relevante"] else "REVIEW"
+    dec = "LAUNCH" if out["1_primary_result"]["relevant"] else "REVIEW"
     out["6_decision"] = {
         "decision": dec,
-        "justificacion": [
+        "justification": [
             f"Primary effect +{prim['lift_pct']:.2f}% (95% CI [{prim['ci_lo']:.2f}, {prim['ci_hi']:.2f}]), "
             f"log10(p) = {prim['log10_p']} -> highly significant.",
             f"95% CI entirely above the relevance MDE (+{MDE_RELEVANCIA}%) -> relevant for the business.",
             "No guardrail degraded (Phase 4, Benjamini-Hochberg).",
             "Homogeneous effect across pre-specified segments (no interaction after BH).",
-            f"Covariate-adjusted estimate (ANCOVA): +{out['3_ancova']['con_ajuste']['lift_pct']}% "
-            f"with SE {out['3_ancova']['reduccion_SE_pct']}% lower.",
+            f"Covariate-adjusted estimate (ANCOVA): +{out['3_ancova']['adjusted']['lift_pct']}% "
+            f"with SE {out['3_ancova']['SE_reduction_pct']}% lower.",
             f"Estimated impact: +R$ {uplift_gmv_year:,.0f}/year of merchandise GMV "
             f"(CI [{gmv_year*prim['ci_lo']/100:,.0f}, {gmv_year*prim['ci_hi']/100:,.0f}]).",
         ],

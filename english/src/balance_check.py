@@ -43,7 +43,7 @@ def main():
     for col in NUM_COVARS:
         smd = smd_continuous(t[col], c[col])
         st, p = stats.ttest_ind(t[col], c[col], equal_var=False)
-        rows.append({"covariable": col, "tipo": "continuous",
+        rows.append({"covariate": col, "type": "continuous",
                      "control": round(c[col].mean(), 4), "treatment": round(t[col].mean(), 4),
                      "SMD": round(smd, 4), "test": "Welch-t", "stat": round(st, 3), "p_value": round(p, 4)})
 
@@ -55,17 +55,17 @@ def main():
         ptt = t[col].value_counts(normalize=True)
         levels = pc.index.union(ptt.index)
         smd_max = max(abs(smd_binary(ptt.get(l, 0.0), pc.get(l, 0.0))) for l in levels)
-        rows.append({"covariable": col, "tipo": f"categorical ({ct.shape[0]} levels)",
+        rows.append({"covariate": col, "type": f"categorical ({ct.shape[0]} levels)",
                      "control": "-", "treatment": "-",
                      "SMD": round(smd_max, 4), "test": f"chi2 (dof={dof})",
                      "stat": round(chi2, 2), "p_value": round(p, 4)})
 
     bal = pd.DataFrame(rows)
-    bal["balanceada"] = bal["SMD"].abs() < 0.10
+    bal["balanced"] = bal["SMD"].abs() < 0.10
     bal.to_csv(OUT_T / "phase3_balance.csv", index=False)
     print("=== Covariate balance check (SEED=42 assignment) ===")
     print(bal.to_string(index=False))
-    print(f"\nAll |SMD| < 0.10: {bal['balanceada'].all()}")
+    print(f"\nAll |SMD| < 0.10: {bal['balanced'].all()}")
     print(f"No omnibus test significant at 0.05: {(bal['p_value'] >= 0.05).all()}")
 
     # --- SRM check (Sample Ratio Mismatch) ---
@@ -96,7 +96,7 @@ def main():
     ax.scatter(b2["SMD"].abs(), range(len(b2)), color="#3b6ea5", zorder=3)
     ax.axvline(0.10, color="#c1121f", ls="--", lw=1.2, label="threshold |SMD| = 0.10")
     ax.set_yticks(range(len(b2)))
-    ax.set_yticklabels(b2["covariable"])
+    ax.set_yticklabels(b2["covariate"])
     ax.set_xlabel("|SMD| (standardized mean difference)")
     ax.set_title("Covariate balance after random assignment (Phase 3)")
     ax.set_xlim(0, max(0.12, b2["SMD"].abs().max() * 1.3))

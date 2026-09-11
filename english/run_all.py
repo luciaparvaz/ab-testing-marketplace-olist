@@ -62,7 +62,7 @@ def reproducibility_report() -> bool:
         ("A/B multi-seed (raw): |bias| < 0.3 pp", abs(ms["bias_pp"]) < 0.3),
         ("A/B multi-seed (raw): CI coverage in [0.90, 0.98]", 0.90 <= ms["CI95_coverage_of_+5pct"] <= 0.98),
         ("no SRM (p > 0.01)", float(srm["p_value"]) > 0.01),
-        ("all covariates balanced", bool(bal["balanceada"].all())),
+        ("all covariates balanced", bool(bal["balanced"].all())),
         ("guardrails: none blocks the launch (two-gate rule)", guard_ok),
         ("homogeneous effect across segments (no interaction after BH)",
          all(not v["heterogeneity_significant_after_BH"]

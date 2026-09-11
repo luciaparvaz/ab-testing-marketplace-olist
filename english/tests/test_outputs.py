@@ -47,7 +47,7 @@ def test_no_srm(outputs_dir):
 
 def test_covariates_balanced(outputs_dir):
     bal = pd.read_csv(outputs_dir / "phase3_balance.csv")
-    assert bal["balanceada"].all()
+    assert bal["balanced"].all()
     assert bal["SMD"].abs().max() < 0.10
 
 

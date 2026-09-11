@@ -140,8 +140,8 @@ display(pd.read_csv(TABLES / "phase3_transformations.csv"))
 # %%
 bal = pd.read_csv(TABLES / "phase3_balance.csv")
 srm = pd.read_csv(TABLES / "phase3_srm.csv").iloc[0]
-display(bal[["covariable", "tipo", "SMD", "p_value", "balanceada"]])
-print(f"All |SMD| < 0.10: {bal['balanceada'].all()}   ·   no omnibus test significant: "
+display(bal[["covariate", "type", "SMD", "p_value", "balanced"]])
+print(f"All |SMD| < 0.10: {bal['balanced'].all()}   ·   no omnibus test significant: "
       f"{(bal['p_value'] >= 0.05).all()}")
 print(f"SRM check: control={srm['n_control']} treatment={srm['n_treatment']}  "
       f"chi2={srm['chi2']:.3f} p={srm['p_value']:.3f}  ->  {srm['veredicto']}")

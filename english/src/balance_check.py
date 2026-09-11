@@ -77,7 +77,7 @@ def main():
           f"{'OK, compatible with 50/50' if p_srm > 0.01 else 'ALERT: possible SRM, review the assignment'}")
     pd.DataFrame([{"n_control": n_c, "n_treatment": n_t, "ratio_treatment": round(n_t/(n_c+n_t), 5),
                    "chi2": round(chi2_srm, 4), "p_value": round(p_srm, 4),
-                   "veredicto": "no SRM" if p_srm > 0.01 else "SRM"}]
+                   "verdict": "no SRM" if p_srm > 0.01 else "SRM"}]
                  ).to_csv(OUT_T / "phase3_srm.csv", index=False)
 
     # --- point A/A check on the primary metric ---

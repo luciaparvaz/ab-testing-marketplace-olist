@@ -144,7 +144,7 @@ display(bal[["covariate", "type", "SMD", "p_value", "balanced"]])
 print(f"All |SMD| < 0.10: {bal['balanced'].all()}   ·   no omnibus test significant: "
       f"{(bal['p_value'] >= 0.05).all()}")
 print(f"SRM check: control={srm['n_control']} treatment={srm['n_treatment']}  "
-      f"chi2={srm['chi2']:.3f} p={srm['p_value']:.3f}  ->  {srm['veredicto']}")
+      f"chi2={srm['chi2']:.3f} p={srm['p_value']:.3f}  ->  {srm['verdict']}")
 display(Image(str(FIGURES / "f3_01_balance.png")))
 
 # %% [markdown]

@@ -42,7 +42,7 @@ def test_analytical_table_shape(outputs_dir):
 def test_no_srm(outputs_dir):
     srm = pd.read_csv(outputs_dir / "phase3_srm.csv").iloc[0]
     assert srm["p_value"] > 0.01
-    assert srm["veredicto"] == "no SRM"
+    assert srm["verdict"] == "no SRM"
 
 
 def test_covariates_balanced(outputs_dir):

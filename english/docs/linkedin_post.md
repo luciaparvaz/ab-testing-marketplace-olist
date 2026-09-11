@@ -24,7 +24,7 @@ It wasn't real heterogeneity, it was an artifact of measuring the wrong magnitud
 wrongly posed. You have to test the correct business question (does the **%** change?), not the
 one that first comes out of the `groupby`.
 
-All the code, the per-phase documentation, and two statistical audits are in the repo 👇
+All the code, the per-phase documentation, and four statistical audits are in the repo 👇
 
 #DataScience #ABTesting #Experimentation #ProductAnalytics #CRISPDM
 

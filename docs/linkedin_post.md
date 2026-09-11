@@ -27,7 +27,7 @@ grandes. No era heterogeneidad real, era un artefacto de medir la magnitud equiv
 planteado. Hay que testar la pregunta de negocio correcta (¿cambia el **%**?), no la que primero
 sale del `groupby`.
 
-Todo el código, la documentación por fase y dos auditorías estadísticas están en el repo 👇
+Todo el código, la documentación por fase y cuatro auditorías estadísticas están en el repo 👇
 
 #DataScience #ABTesting #Experimentation #ProductAnalytics #CRISPDM
 

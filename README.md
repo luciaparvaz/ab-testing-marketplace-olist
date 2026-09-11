@@ -10,6 +10,9 @@ encima del umbral de relevancia de negocio (+3 %), sin degradar ningún guardrai
 📖 **[`docs/informe_completo.md`](docs/informe_completo.md)** — informe de referencia: recorre cada
 fase, cada decisión, los resultados (redacción tipo TFM) y las limitaciones.
 
+🌐 **English version: [`english/README.md`](english/README.md)** — full mirror (docs, code, tests).
+This Spanish README is the canonical/reference version; the English one is kept in sync with it.
+
 ---
 
 ## ⚠️ Nota de honestidad metodológica

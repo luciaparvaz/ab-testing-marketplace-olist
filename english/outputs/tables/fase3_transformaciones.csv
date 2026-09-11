@@ -1,0 +1,5 @@
+paso,n_antes,n_despues,delta,justificacion
+date_window,99441,99092,-349,"restrict to [2017-01-01, 2018-09-01) for realism (does not fix bias, §B6)"
+valid_statuses,99092,97905,-1187,"keep ['approved', 'delivered', 'invoiced', 'processing', 'shipped'] = purchase completed; exclude canceled/unavailable/created"
+orders_with_items,97905,97905,0,exclude orders with no order_items lines (they have no primary metric)
+dedup_1_order_per_customer,97905,94703,-3202,keep each customer's first order -> randomization unit = analysis unit (§B3)

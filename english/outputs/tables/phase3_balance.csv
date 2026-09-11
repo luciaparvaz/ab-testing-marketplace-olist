@@ -1,4 +1,4 @@
-covariable,tipo,control,treatment,SMD,test,stat,p_value,balanceada
+covariate,type,control,treatment,SMD,test,stat,p_value,balanced
 n_items,continuous,1.14,1.1381,-0.0036,Welch-t,-0.555,0.579,True
 freight_value,continuous,22.7423,22.8869,0.0067,Welch-t,1.027,0.3046,True
 customer_state,categorical (27 levels),-,-,0.0127,chi2 (dof=26),16.68,0.9185,True

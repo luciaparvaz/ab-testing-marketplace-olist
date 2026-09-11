@@ -92,8 +92,8 @@ actually governs the decision) instead of bare significance.
 ## Medium findings (fixed)
 
 - **Balance check via raw-text parsing** in `run_all.py::reproducibility_report()`
-  (`"False" not in bal.split("balanceada")[1]`) — replaced with a `pandas` read and
-  `bal["balanceada"].all()`, identical to the equivalent check in `test_outputs.py`.
+  (`"False" not in bal.split("balanced")[1]`) — replaced with a `pandas` read and
+  `bal["balanced"].all()`, identical to the equivalent check in `test_outputs.py`.
 - **Outdated caption** in `figures_phase2.py` ("log(AOV) ... nearly normal"), which did not reflect
   the nuance already applied to the text in `audit_phase1_phase2.md` — corrected to "robust range
   for the t-test; CLT at large n".

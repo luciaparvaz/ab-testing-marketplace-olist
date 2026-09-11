@@ -13,7 +13,7 @@ import pytest
 
 @pytest.fixture(scope="module")
 def f4(outputs_dir):
-    p = outputs_dir / "fase4_resumen.json"
+    p = outputs_dir / "phase4_summary.json"
     if not p.exists():
         pytest.skip("run `python run_all.py` first")
     return json.loads(p.read_text(encoding="utf-8"))
@@ -21,7 +21,7 @@ def f4(outputs_dir):
 
 @pytest.fixture(scope="module")
 def f5(outputs_dir):
-    p = outputs_dir / "fase5_resumen.json"
+    p = outputs_dir / "phase5_summary.json"
     if not p.exists():
         pytest.skip("run `python run_all.py` first")
     return json.loads(p.read_text(encoding="utf-8"))
@@ -40,13 +40,13 @@ def test_analytical_table_shape(outputs_dir):
 
 
 def test_no_srm(outputs_dir):
-    srm = pd.read_csv(outputs_dir / "fase3_srm.csv").iloc[0]
+    srm = pd.read_csv(outputs_dir / "phase3_srm.csv").iloc[0]
     assert srm["p_value"] > 0.01
     assert srm["veredicto"] == "no SRM"
 
 
 def test_covariates_balanced(outputs_dir):
-    bal = pd.read_csv(outputs_dir / "fase3_balance.csv")
+    bal = pd.read_csv(outputs_dir / "phase3_balance.csv")
     assert bal["balanceada"].all()
     assert bal["SMD"].abs().max() < 0.10
 

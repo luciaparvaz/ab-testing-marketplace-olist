@@ -24,15 +24,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 import config  # noqa: E402
 
 STEPS = [
-    ("Phase 2 · profiling", "profiling_fase2", [config.OUT_TABLES / "fase2_resumen.json"]),
-    ("Phase 2 · figures", "figures_fase2", [config.OUT_FIGURES / "f2_02_distribucion_aov.png"]),
+    ("Phase 2 · profiling", "profiling_phase2", [config.OUT_TABLES / "phase2_summary.json"]),
+    ("Phase 2 · figures", "figures_phase2", [config.OUT_FIGURES / "f2_02_aov_distribution.png"]),
     ("Phase 3 · preparation", "prepare_data",
-     [config.ANALYTICAL_TABLE, config.OUT_TABLES / "fase3_transformaciones.csv"]),
+     [config.ANALYTICAL_TABLE, config.OUT_TABLES / "phase3_transformations.csv"]),
     ("Phase 3 · balance + SRM", "balance_check",
-     [config.OUT_TABLES / "fase3_balance.csv", config.OUT_TABLES / "fase3_srm.csv"]),
+     [config.OUT_TABLES / "phase3_balance.csv", config.OUT_TABLES / "phase3_srm.csv"]),
     ("Phase 4 · MDE break-even", "mde_cost_model", [config.OUT_TABLES / "mde_cost_model.csv"]),
-    ("Phase 4 · modeling", "modeling", [config.OUT_TABLES / "fase4_resumen.json"]),
-    ("Phase 5 · evaluation", "evaluation", [config.OUT_TABLES / "fase5_resumen.json"]),
+    ("Phase 4 · modeling", "modeling", [config.OUT_TABLES / "phase4_summary.json"]),
+    ("Phase 5 · evaluation", "evaluation", [config.OUT_TABLES / "phase5_summary.json"]),
 ]
 
 
@@ -43,10 +43,10 @@ def _load_csv_dict(path: Path) -> dict:
 
 
 def reproducibility_report() -> bool:
-    f4 = json.loads((config.OUT_TABLES / "fase4_resumen.json").read_text(encoding="utf-8"))
-    f5 = json.loads((config.OUT_TABLES / "fase5_resumen.json").read_text(encoding="utf-8"))
-    srm = _load_csv_dict(config.OUT_TABLES / "fase3_srm.csv")
-    bal = pd.read_csv(config.OUT_TABLES / "fase3_balance.csv")
+    f4 = json.loads((config.OUT_TABLES / "phase4_summary.json").read_text(encoding="utf-8"))
+    f5 = json.loads((config.OUT_TABLES / "phase5_summary.json").read_text(encoding="utf-8"))
+    srm = _load_csv_dict(config.OUT_TABLES / "phase3_srm.csv")
+    bal = pd.read_csv(config.OUT_TABLES / "phase3_balance.csv")
 
     aa = f4["3_aa_calibration"]["merch_value"]["false_positive_rate_alpha_0.05"]
     prim = f5["1_primary_result"]

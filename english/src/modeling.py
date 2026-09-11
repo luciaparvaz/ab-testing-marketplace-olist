@@ -184,7 +184,7 @@ def check_assumptions(df: pd.DataFrame) -> dict:
     ax[1].set_xlabel("mean of merch_value (R$)")
     fig.suptitle("Normality assumption: the data doesn't meet it, the mean does (CLT)", y=1.03)
     fig.tight_layout()
-    fig.savefig(FIG / "f4_01_tcl_normalidad.png", bbox_inches="tight")
+    fig.savefig(FIG / "f4_01_clt_normality.png", bbox_inches="tight")
     plt.close(fig)
 
     return {
@@ -246,7 +246,7 @@ def aa_calibration(df: pd.DataFrame) -> dict:
     ax.set_xlabel("p-value (Welch-t on merch_value, no effect)")
     ax.legend(fontsize=8)
     fig.tight_layout()
-    fig.savefig(FIG / "f4_02_aa_pvalores.png")
+    fig.savefig(FIG / "f4_02_aa_pvalues.png")
     plt.close(fig)
     return out
 
@@ -410,7 +410,7 @@ def run_ab_test(df: pd.DataFrame) -> dict:
     ax.set_title("A/B · effect on the primary metric (injected diluted effect)")
     ax.legend(fontsize=8)
     fig.tight_layout()
-    fig.savefig(FIG / "f4_03_ab_efecto.png")
+    fig.savefig(FIG / "f4_03_ab_effect.png")
     plt.close(fig)
     return res
 
@@ -636,7 +636,7 @@ def main():
         "8_ab_multiseed": ab_multiseed(df),
         "9_clustered_se": clustered_se_robustness(),
     }
-    (OUT_T / "fase4_resumen.json").write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
+    (OUT_T / "phase4_summary.json").write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
     print(json.dumps(report, indent=2, ensure_ascii=False))
 
 

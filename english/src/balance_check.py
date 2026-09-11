@@ -6,7 +6,7 @@ Verifies that control and treatment are exchangeable BEFORE injecting any effect
   - Omnibus test per covariate (chi2 for categorical, Welch-t for continuous)
   - Point A/A check on the primary metric with the declared seed (SEED=42)
 
-Output: outputs/tables/fase3_balance.csv  +  outputs/figures/f3_01_balance.png
+Output: outputs/tables/phase3_balance.csv  +  outputs/figures/f3_01_balance.png
 """
 
 from __future__ import annotations
@@ -62,7 +62,7 @@ def main():
 
     bal = pd.DataFrame(rows)
     bal["balanceada"] = bal["SMD"].abs() < 0.10
-    bal.to_csv(OUT_T / "fase3_balance.csv", index=False)
+    bal.to_csv(OUT_T / "phase3_balance.csv", index=False)
     print("=== Covariate balance check (SEED=42 assignment) ===")
     print(bal.to_string(index=False))
     print(f"\nAll |SMD| < 0.10: {bal['balanceada'].all()}")
@@ -78,7 +78,7 @@ def main():
     pd.DataFrame([{"n_control": n_c, "n_treatment": n_t, "ratio_treatment": round(n_t/(n_c+n_t), 5),
                    "chi2": round(chi2_srm, 4), "p_value": round(p_srm, 4),
                    "veredicto": "no SRM" if p_srm > 0.01 else "SRM"}]
-                 ).to_csv(OUT_T / "fase3_srm.csv", index=False)
+                 ).to_csv(OUT_T / "phase3_srm.csv", index=False)
 
     # --- point A/A check on the primary metric ---
     st, p = stats.ttest_ind(t.merch_value, c.merch_value, equal_var=False)

@@ -2,8 +2,8 @@
 
 > CRISP-DM · Phase 3 of 6
 > Reproducible scripts: `src/prepare_data.py` (analytical table + assignment) · `src/balance_check.py`
-> Output: `data/processed/analytical_table.parquet` · `outputs/tables/fase3_transformaciones.csv`
-> · `outputs/tables/fase3_balance.csv` · `outputs/figures/f3_01_balance.png`
+> Output: `data/processed/analytical_table.parquet` · `outputs/tables/phase3_transformations.csv`
+> · `outputs/tables/phase3_balance.csv` · `outputs/figures/f3_01_balance.png`
 
 Cleaning **aimed at the experimental question** (the redesign's effect on the AOV), not generic
 EDA. Every transformation is logged with its count and its rationale.
@@ -88,7 +88,7 @@ See `f3_01_balance.png`. → **The groups are exchangeable.**
 ### SRM check (Sample Ratio Mismatch)
 
 χ² of the observed split (47,280 / 47,423) against 50/50: **χ² = 0.216, p = 0.642** → the split is
-compatible with 50/50, with no sign of differential unit leakage. (`outputs/tables/fase3_srm.csv`).
+compatible with 50/50, with no sign of differential unit leakage. (`outputs/tables/phase3_srm.csv`).
 
 ### Point A/A check on the primary metric (SEED = 42)
 

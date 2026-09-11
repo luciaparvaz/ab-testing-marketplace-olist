@@ -199,7 +199,7 @@ def main():
         treat_s = (df.group == "treatment").values.astype(float)
         inter_p[seg] = interaction_wald_hc3(np.log(df["mv"].values), treat_s, seg_d)
     seg_df = pd.DataFrame(seg_rows)
-    seg_df.to_csv(OUT_T / "fase5_segmentos.csv", index=False)
+    seg_df.to_csv(OUT_T / "phase5_segments.csv", index=False)
 
     keys = list(inter_p)
     rej, p_adj, _, _ = multipletests([inter_p[k] for k in keys], alpha=ALPHA, method="fdr_bh")
@@ -289,7 +289,7 @@ def main():
                  fontsize=10)
     ax.legend(fontsize=8, loc="lower right")
     fig.tight_layout()
-    fig.savefig(FIG / "f5_01_forest_segmentos.png", bbox_inches="tight")
+    fig.savefig(FIG / "f5_01_forest_segments.png", bbox_inches="tight")
     plt.close(fig)
 
     # ---- 6. decision --------------------------------------------
@@ -323,7 +323,7 @@ def main():
             return float(o)
         raise TypeError(type(o))
 
-    (OUT_T / "fase5_resumen.json").write_text(json.dumps(out, indent=2, ensure_ascii=False, default=_js), encoding="utf-8")
+    (OUT_T / "phase5_summary.json").write_text(json.dumps(out, indent=2, ensure_ascii=False, default=_js), encoding="utf-8")
     print(json.dumps(out, indent=2, ensure_ascii=False, default=_js))
 
 

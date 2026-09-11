@@ -1,8 +1,8 @@
 # Phase 5 — Evaluation
 
 > CRISP-DM · Phase 5 of 6
-> Reproducible script: `src/evaluation.py` → `outputs/tables/fase5_resumen.json`,
-> `outputs/tables/fase5_segmentos.csv` · Figure: `outputs/figures/f5_01_forest_segmentos.png`
+> Reproducible script: `src/evaluation.py` → `outputs/tables/phase5_summary.json`,
+> `outputs/tables/phase5_segments.csv` · Figure: `outputs/figures/f5_01_forest_segments.png`
 
 Translates Phase 4's statistical result into a **product decision**, separating significance from
 relevance and controlling for p-hacking in the segment analysis.

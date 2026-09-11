@@ -31,7 +31,7 @@ def main():
     ax.set_ylabel("orders")
     ax.legend(loc="upper left", fontsize=8)
     fig.tight_layout()
-    fig.savefig(FIG / "f2_01_volumen_mensual.png")
+    fig.savefig(FIG / "f2_01_monthly_volume.png")
     plt.close(fig)
 
     # --- Fig 2: AOV (primary metric) distribution, raw vs log ---
@@ -49,7 +49,7 @@ def main():
     axes[1].set_xlabel("log(merchandise value)")
     fig.suptitle("Distribution of the primary metric — input for the power analysis (Phase 4)", y=1.03)
     fig.tight_layout()
-    fig.savefig(FIG / "f2_02_distribucion_aov.png", bbox_inches="tight")
+    fig.savefig(FIG / "f2_02_aov_distribution.png", bbox_inches="tight")
     plt.close(fig)
 
     # --- Fig 3: guardrails (review score + orders per customer) ---

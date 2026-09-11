@@ -76,8 +76,55 @@ def test_multiseed_crudo_unbiased(f4):
 
 
 def test_guardrails_not_degraded(f4):
+    """'bloquea' aplica la regla de dos puertas (significativo tras BH Y magnitud >= umbral) y es
+    el campo real que run_all.py usa para decidir; significativo_tras_BH por sí solo NO debe
+    gobernar la decisión (ver auditoría de implementación, hallazgo 2)."""
     for g in f4["4_ab_test"]["guardrails"].values():
-        assert not g["significativo_tras_BH"]
+        assert not g["bloquea"]
+
+
+def test_g2_uses_same_assignment_as_analytical_table():
+    """g2_cancellation_guardrail() debe agregar sobre la MISMA asignación control/treatment
+    persistida en analytical_table.parquet, no una recalculada por posición de fila (auditoría de
+    implementación, hallazgo 1). Se verifica recomputando control/treatment counts de forma
+    independiente (merge directo cliente->group) y comparando con lo que devuelve la función real."""
+    from config import ANALYTICAL_TABLE, RAW, WINDOW_START, WINDOW_END
+    if not ANALYTICAL_TABLE.exists():
+        pytest.skip("ejecuta `python run_all.py` primero")
+    import modeling
+
+    at = pd.read_parquet(ANALYTICAL_TABLE)[["customer_unique_id", "group"]]
+    orders = pd.read_csv(RAW / "olist_orders_dataset.csv", parse_dates=["order_purchase_timestamp"])
+    customers = pd.read_csv(RAW / "olist_customers_dataset.csv")
+    m = (orders["order_purchase_timestamp"] >= WINDOW_START) & (orders["order_purchase_timestamp"] < WINDOW_END)
+    o = orders[m].merge(customers[["customer_id", "customer_unique_id"]], on="customer_id", how="left")
+    o = o.sort_values("order_purchase_timestamp").drop_duplicates("customer_unique_id", keep="first")
+    o = o.merge(at, on="customer_unique_id", how="inner")
+    o["canceled"] = (o["order_status"] == "canceled").astype(int)
+    expected = o.groupby("group")["canceled"].agg(["sum", "count"])
+
+    g2 = modeling.g2_cancellation_guardrail()
+    assert g2["control"]["n"] == int(expected.loc["control", "count"])
+    assert g2["treatment"]["n"] == int(expected.loc["treatment", "count"])
+    assert g2["control"]["cancelados"] == int(expected.loc["control", "sum"])
+    assert g2["treatment"]["cancelados"] == int(expected.loc["treatment", "sum"])
+
+
+def test_guardrail_bloquea_is_two_gate_and(f4):
+    """'bloquea' en el guardrail real (run_ab_test) debe ser exactamente significativo_tras_BH Y
+    magnitud_supera_umbral (True si no hay umbral cuantificado, p. ej. G4) — la regla de dos
+    puertas debe estar en el código de decisión, no solo en la función de demostración aislada."""
+    for g in f4["4_ab_test"]["guardrails"].values():
+        mag = g["magnitud_supera_umbral"]
+        expected = g["significativo_tras_BH"] and (True if mag is None else mag)
+        assert g["bloquea"] == expected
+
+
+def test_guardrail_thresholds_configured():
+    from config import GUARDRAIL_THRESHOLDS
+    assert GUARDRAIL_THRESHOLDS["g1_review_score_pts"] == 0.05
+    assert GUARDRAIL_THRESHOLDS["g2_cancelacion_pp"] == 0.2
+    assert GUARDRAIL_THRESHOLDS["g3_freight_share_of_aov_rise_pct"] == 20.0
 
 
 def test_guardrail_regression_two_gate_rule(f4):

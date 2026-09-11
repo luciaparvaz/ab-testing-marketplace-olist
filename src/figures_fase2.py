@@ -44,7 +44,8 @@ def main():
     axes[0].set_xlabel("valor de mercancía por pedido (R$)")
     axes[0].legend(fontsize=8)
     axes[1].hist(np.log(np.clip(mv, 0.01, None)), bins=80, color="#2a9d8f")
-    axes[1].set_title(f"log(AOV)  ·  skew={pd.Series(np.log(np.clip(mv,0.01,None))).skew():.2f} (casi normal)")
+    axes[1].set_title(f"log(AOV)  ·  skew={pd.Series(np.log(np.clip(mv,0.01,None))).skew():.2f} "
+                      f"(rango robusto para el t-test; TCL a n grande)")
     axes[1].set_xlabel("log(valor de mercancía)")
     fig.suptitle("Distribución de la métrica primaria — input del power analysis (Fase 4)", y=1.03)
     fig.tight_layout()

@@ -85,7 +85,7 @@ Es el trabajo que hace un equipo de experimentación de producto.
 │   ├── ab_test_olist.ipynb      # notebook de PRESENTACIÓN (solo lee outputs/, no calcula)
 │   └── ab_test_olist.py         # fuente jupytext (control de versiones)
 ├── outputs/{figures,tables}/    # figuras + JSON/CSV de resultados (regenerables)
-├── docs/                        # informe_completo · 01..06 por fase · 3 auditorías · resumen ejec. · post LinkedIn
+├── docs/                        # informe_completo · 01..06 por fase · 4 auditorías (incl. auditoria_implementacion.md) · resumen ejec. · post LinkedIn
 ├── requirements.txt · pytest.ini · LICENSE
 ```
 

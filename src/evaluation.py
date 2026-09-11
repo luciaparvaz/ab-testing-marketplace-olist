@@ -130,7 +130,8 @@ def main():
     from config import VALID_STATUS
     n_orders_window = int(((orders_full[mw].order_status.isin(VALID_STATUS)) &
         (orders_full[mw].order_id.isin(valid_ids))).sum())
-    n_orders_year = n_orders_window / 20 * 12
+    n_months = (pd.Timestamp(WINDOW_END).to_period("M") - pd.Timestamp(WINDOW_START).to_period("M")).n
+    n_orders_year = n_orders_window / n_months * 12
     base_aov = df.loc[~is_t, "merch_value"].mean()
     gmv_year = n_orders_year * base_aov
     uplift_gmv_year = gmv_year * prim["lift_pct"] / 100
@@ -148,7 +149,7 @@ def main():
     from config import COST_MODEL
     COMMISSION = COST_MODEL["commission"]  # take rate asumida del marketplace
     out["2_impacto_negocio"] = {
-        "pedidos_validos_ventana_sin_dedup": n_orders_window, "meses_ventana": 20,
+        "pedidos_validos_ventana_sin_dedup": n_orders_window, "meses_ventana": n_months,
         "pedidos_por_anio_estimado": round(n_orders_year),
         "AOV_base_R$": round(base_aov, 2),
         "GMV_mercancia_anual_estimado_R$": round(gmv_year),

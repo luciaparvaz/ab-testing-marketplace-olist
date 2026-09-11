@@ -22,8 +22,9 @@ from scipy import stats
 from statsmodels.stats.power import TTestIndPower
 from statsmodels.stats.multitest import multipletests
 
-from config import (ALPHA, ANALYTICAL_TABLE, ATE, DELTA_RESP, EPS_SD, MDE_RELEVANCIA, N_BOOT, N_SIM_AA,
-                    N_SIM_MULTISEED, N_SIM_POWER, OUT_FIGURES as FIG, OUT_TABLES as OUT_T,
+from config import (ALPHA, ANALYTICAL_TABLE, ATE, DELTA_RESP, EPS_SD, GUARDRAIL_THRESHOLDS,
+                    MDE_RELEVANCIA, N_BOOT, N_SIM_AA, N_SIM_MULTISEED, N_SIM_POWER,
+                    OUT_FIGURES as FIG, OUT_TABLES as OUT_T,
                     P_RESP, PROC, RAW, SEED, TARGET_POWER, VALID_STATUS, WINDOW_END, WINDOW_START,
                     WINSOR_Q, apply_plot_style)
 from effect_model import inject_diluted_effect
@@ -123,12 +124,18 @@ def g2_cancellation_guardrail() -> dict:
     orders = pd.read_csv(RAW / "olist_orders_dataset.csv",
                          parse_dates=["order_purchase_timestamp"])
     customers = pd.read_csv(RAW / "olist_customers_dataset.csv")
+    # asignación ÚNICA del experimento (persistida en la tabla analítica) — NUNCA recalculada aquí.
+    # G2 necesita conservar los pedidos 'canceled' (es la propia métrica que mide), así que no puede
+    # deduplicar sobre la misma tabla filtrada por VALID_STATUS que usa prepare_data.py; en su lugar
+    # se hace JOIN contra el group ya asignado, para que la partición control/treatment sea idéntica
+    # en todo el pipeline (auditoría de implementación, hallazgo 1).
+    at = pd.read_parquet(ANALYTICAL_TABLE)[["customer_unique_id", "group"]]
+
     m = (orders["order_purchase_timestamp"] >= WINDOW_START) & \
         (orders["order_purchase_timestamp"] < WINDOW_END)
     o = orders[m].merge(customers[["customer_id", "customer_unique_id"]], on="customer_id", how="left")
     o = o.sort_values("order_purchase_timestamp").drop_duplicates("customer_unique_id", keep="first")
-    rng = np.random.default_rng(SEED)
-    o = o.assign(group=rng.choice(["control", "treatment"], size=len(o)))
+    o = o.merge(at, on="customer_unique_id", how="inner")   # solo clientes con asignación conocida
     o["canceled"] = (o["order_status"] == "canceled").astype(int)
     tab = o.groupby("group")["canceled"].agg(["sum", "count"])
     from statsmodels.stats.proportion import proportions_ztest
@@ -139,7 +146,9 @@ def g2_cancellation_guardrail() -> dict:
         "treatment": {"cancelados": int(tab.loc["treatment", "sum"]), "n": int(tab.loc["treatment", "count"]),
                       "tasa_pct": round(tab.loc["treatment", "sum"] / tab.loc["treatment", "count"] * 100, 3)},
         "z_stat": round(float(stat), 3), "p_value": round(float(p), 4),
-        "nota": "tabla de pedidos completa (incluye canceled); sin efecto inyectado -> se espera no degradación",
+        "nota": "tabla de pedidos completa (incluye canceled), pero con la MISMA asignación "
+                "control/treatment que analytical_table.parquet; sin efecto inyectado -> se espera "
+                "no degradación",
     }
 
 
@@ -318,6 +327,7 @@ def run_ab_test(df: pd.DataFrame) -> dict:
     g2 = g2_cancellation_guardrail()
     guard["G2_cancelacion"] = {"control_pct": g2["control"]["tasa_pct"],
                                "treatment_pct": g2["treatment"]["tasa_pct"],
+                               "diff_pp": round(g2["treatment"]["tasa_pct"] - g2["control"]["tasa_pct"], 4),
                                "z_stat": g2["z_stat"], "p_welch": g2["p_value"],
                                "umbral_alarma": "subida significativa"}
     raw_p["G2_cancelacion"] = g2["p_value"]
@@ -342,10 +352,45 @@ def run_ab_test(df: pd.DataFrame) -> dict:
     for k, pa, r in zip(keys, p_adj, rej):
         guard[k]["p_ajustado_BH"] = float(f"{pa:.4f}")
         guard[k]["significativo_tras_BH"] = bool(r)
+
+    # --- regla de dos puertas (significativo Y magnitud >= umbral), §1.4 / auditoría D19 ---
+    # G4 no tiene umbral de magnitud cuantificado en el diseño ("magnitud relevante") -> se deja
+    # solo con el criterio de significancia, declarado explícitamente (ver GUARDRAIL_THRESHOLDS).
+    aov_diff_r = primary["Welch_winsor_p99.5"]["diff_abs_R$"]
+    guard["G1_review_score"]["magnitud_supera_umbral"] = bool(
+        guard["G1_review_score"]["diff"] <= -GUARDRAIL_THRESHOLDS["g1_review_score_pts"])
+    guard["G2_cancelacion"]["magnitud_supera_umbral"] = bool(
+        guard["G2_cancelacion"]["diff_pp"] >= GUARDRAIL_THRESHOLDS["g2_cancelacion_pp"])
+    guard["G3_freight_value"]["magnitud_supera_umbral"] = bool(
+        guard["G3_freight_value"]["diff"] > 0
+        and aov_diff_r > 0
+        and guard["G3_freight_value"]["diff"] >= GUARDRAIL_THRESHOLDS["g3_freight_share_of_aov_rise_pct"] / 100 * aov_diff_r)
+    guard["G4_n_items"]["magnitud_supera_umbral"] = None
+    guard["G4_n_items"]["nota_umbral"] = ("sin umbral de magnitud cuantificado en el diseño (§1.4: "
+                                          "'magnitud relevante') -> bloquea solo por significancia, "
+                                          "declarado como limitación conocida")
+    for k in keys:
+        mag = guard[k]["magnitud_supera_umbral"]
+        guard[k]["bloquea"] = bool(guard[k]["significativo_tras_BH"] and (True if mag is None else mag))
+
     res["guardrails"] = guard
     res["guardrails_nota"] = ("G2 (cancelación) se evalúa sobre la tabla de pedidos completa, no la "
-                              "analítica (que ya filtra estados). Sin efecto inyectado en guardrails "
-                              "-> se espera no degradación.")
+                              "analítica (que ya filtra estados), pero con la MISMA asignación "
+                              "control/treatment persistida en analytical_table.parquet: el inner "
+                              "join contra esa tabla excluye a los clientes cuyo único pedido en la "
+                              "ventana fue cancelado (nunca llegaron a tener un pedido válido -> "
+                              "nunca fueron asignados a un grupo real). Por eso la tasa de G2 "
+                              "(~0,02-0,04%) es mucho menor que la tasa global de cancelación de la "
+                              "Fase 2 (~0,63% sobre TODO el que compró en la ventana, incluidos los "
+                              "que solo cancelaron): son poblaciones distintas por diseño, no un "
+                              "error. Medir el guardrail sobre 'todo el que compró' mezclaría en el "
+                              "denominador a gente que el experimento nunca tocó; medirlo sobre "
+                              "'quien quedó efectivamente asignado' es la definición correcta para un "
+                              "guardrail de EXPERIMENTO (auditoría de implementación, hallazgo 1). "
+                              "Sin efecto inyectado en guardrails -> se espera no degradación. "
+                              "'bloquea' aplica la regla de dos puertas (significativo tras BH Y "
+                              "magnitud >= umbral); es el campo que debe leer cualquier consumidor de "
+                              "esta decisión.")
 
     # --- figura resumen del A/B ---
     fig, ax = plt.subplots(figsize=(7, 3))

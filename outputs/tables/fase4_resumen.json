@@ -196,16 +196,21 @@
         "p_welch": 0.8040402945385485,
         "umbral_alarma": "caída >= 0.05 pts",
         "p_ajustado_BH": 0.804,
-        "significativo_tras_BH": false
+        "significativo_tras_BH": false,
+        "magnitud_supera_umbral": false,
+        "bloquea": false
       },
       "G2_cancelacion": {
-        "control_pct": 0.541,
-        "treatment_pct": 0.57,
-        "z_stat": -0.587,
-        "p_welch": 0.5572,
+        "control_pct": 0.023,
+        "treatment_pct": 0.036,
+        "diff_pp": 0.013,
+        "z_stat": -1.126,
+        "p_welch": 0.2601,
         "umbral_alarma": "subida significativa",
-        "p_ajustado_BH": 0.772,
-        "significativo_tras_BH": false
+        "p_ajustado_BH": 0.6092,
+        "significativo_tras_BH": false,
+        "magnitud_supera_umbral": false,
+        "bloquea": false
       },
       "G3_freight_value": {
         "control": 22.742,
@@ -213,8 +218,10 @@
         "diff": 0.145,
         "p_welch": 0.3046130282249461,
         "umbral_alarma": "subida significativa",
-        "p_ajustado_BH": 0.772,
-        "significativo_tras_BH": false
+        "p_ajustado_BH": 0.6092,
+        "significativo_tras_BH": false,
+        "magnitud_supera_umbral": false,
+        "bloquea": false
       },
       "G4_n_items": {
         "control": 1.14,
@@ -223,10 +230,13 @@
         "p_welch": 0.5790246533335446,
         "umbral_alarma": "caída significativa",
         "p_ajustado_BH": 0.772,
-        "significativo_tras_BH": false
+        "significativo_tras_BH": false,
+        "magnitud_supera_umbral": null,
+        "nota_umbral": "sin umbral de magnitud cuantificado en el diseño (§1.4: 'magnitud relevante') -> bloquea solo por significancia, declarado como limitación conocida",
+        "bloquea": false
       }
     },
-    "guardrails_nota": "G2 (cancelación) se evalúa sobre la tabla de pedidos completa, no la analítica (que ya filtra estados). Sin efecto inyectado en guardrails -> se espera no degradación."
+    "guardrails_nota": "G2 (cancelación) se evalúa sobre la tabla de pedidos completa, no la analítica (que ya filtra estados), pero con la MISMA asignación control/treatment persistida en analytical_table.parquet: el inner join contra esa tabla excluye a los clientes cuyo único pedido en la ventana fue cancelado (nunca llegaron a tener un pedido válido -> nunca fueron asignados a un grupo real). Por eso la tasa de G2 (~0,02-0,04%) es mucho menor que la tasa global de cancelación de la Fase 2 (~0,63% sobre TODO el que compró en la ventana, incluidos los que solo cancelaron): son poblaciones distintas por diseño, no un error. Medir el guardrail sobre 'todo el que compró' mezclaría en el denominador a gente que el experimento nunca tocó; medirlo sobre 'quien quedó efectivamente asignado' es la definición correcta para un guardrail de EXPERIMENTO (auditoría de implementación, hallazgo 1). Sin efecto inyectado en guardrails -> se espera no degradación. 'bloquea' aplica la regla de dos puertas (significativo tras BH Y magnitud >= umbral); es el campo que debe leer cualquier consumidor de esta decisión."
   },
   "5_decision_scenarios": {
     "nota": "regla §1.5 · MDE relevancia = +3.0% · guardrails no inyectados (siempre OK) · este split tiene +1,2% de desbalance basal",

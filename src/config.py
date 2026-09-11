@@ -44,6 +44,8 @@ ATE: float = P_RESP * DELTA_RESP                     # derivado: efecto medio (+
 MDE_RELEVANCIA: float = _P["mde_relevancia_pct"]     # en %
 TARGET_POWER: float = _P["target_power"]
 
+GUARDRAIL_THRESHOLDS: dict = _P["guardrail_thresholds"]
+
 WINDOW_START: str = _P["window_start"]
 WINDOW_END: str = _P["window_end"]
 VALID_STATUS: set[str] = set(_P["valid_status"])

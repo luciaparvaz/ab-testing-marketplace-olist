@@ -39,6 +39,7 @@ DOC_ORDER = [
     ("70_auditoria_fase1_fase2.md", ROOT / "docs/auditoria_fase1_fase2.md"),
     ("72_auditoria_fase5.md", ROOT / "docs/auditoria_fase5.md"),
     ("74_auditoria_global.md", ROOT / "docs/auditoria_global.md"),
+    ("76_auditoria_implementacion.md", ROOT / "docs/auditoria_implementacion.md"),
     ("99_linkedin_post.md", ROOT / "docs/linkedin_post.md"),
 ]
 for dst, src in DOC_ORDER:
@@ -103,7 +104,7 @@ import matplotlib.image as mpimg
 
 CAPTIONS = {
     "f2_01_volumen_mensual.png": "Fase 2 — Volumen mensual de pedidos; ventana estable 2017-01/2018-08.",
-    "f2_02_distribucion_aov.png": "Fase 2 — Distribución del AOV: bruto (skew 9,8) vs log (casi normal).",
+    "f2_02_distribucion_aov.png": "Fase 2 — Distribución del AOV: bruto (skew 9,8) vs log (rango robusto para el t-test; TCL a n grande).",
     "f2_03_guardrails.png": "Fase 2 — Guardrails: review_score y pedidos por cliente.",
     "f3_01_balance.png": "Fase 3 — Balance de covariables tras la asignación (todas |SMD| ≤ 0,02).",
     "f4_01_tcl_normalidad.png": "Fase 4 — Los datos no son normales; la media sí (TCL) -> Welch válido.",

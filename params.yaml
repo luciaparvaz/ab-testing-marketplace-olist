@@ -16,6 +16,16 @@ effect:
 mde_relevancia_pct: 3.0    # lift mínimo de AOV que justifica el coste (ver cost_model)
 target_power: 0.80
 
+# --- Regla de dos puertas para guardrails (docs/01 §1.4; corregida tras auditoría global §D19) ---
+# Un guardrail bloquea el lanzamiento solo si es significativo tras BH Y su magnitud supera el
+# umbral de negocio (ver modeling.py::run_ab_test). G4 no tiene umbral de magnitud declarado en el
+# diseño original ("magnitud relevante" sin cuantificar) -> se deja solo con el criterio de
+# significancia, declarado explícitamente como limitación conocida.
+guardrail_thresholds:
+  g1_review_score_pts: 0.05
+  g2_cancelacion_pp: 0.2
+  g3_freight_share_of_aov_rise_pct: 20.0
+
 # --- Preparación de datos (Fase 3) ---
 window_start: "2017-01-01"
 window_end: "2018-09-01"   # exclusivo -> incluye hasta 2018-08-31

@@ -11,9 +11,18 @@ __pycache__/
 .venv/
 venv/
 env/
+.pytest_cache/
 
 # Jupyter
 *.nbconvert.ipynb
+
+# Secretos / config local
+.env
+*.env
+
+# IDE
+.vscode/
+.idea/
 
 # SO
 .DS_Store

@@ -38,12 +38,12 @@ Es el trabajo que hace un equipo de experimentación de producto.
 
 | Fase | Contenido | Resultado clave |
 |---|---|---|
-| **1 · Business Understanding** | Problema, H0/H1, métrica primaria (AOV), guardrails G1–G4, MDE de relevancia (+3 %), regla de decisión | `docs/01_business_understanding.md` |
+| **1 · Business Understanding** | Problema, H0/H1, métrica primaria (AOV), guardrails G1–G4, MDE de relevancia (+3 %), regla de decisión | [`docs/01_business_understanding.md`](docs/01_business_understanding.md) |
 | **2 · Data Understanding** | Perfilado dirigido; licencia **CC BY-NC-SA 4.0** verificada | AOV media R$ 137 · **CV 1,52 · skew 9,8** · `log(AOV)` casi simétrico |
 | **3 · Data Preparation** | Ventana 2017-01/2018-08 · dedup a 1 pedido/cliente · winsor p99,5 solo para el contraste · asignación simulada | 94.703 pedidos-cliente · **balance OK** (\|SMD\| ≤ 0,02) · **SRM OK** (p = 0,64) |
 | **4 · Modeling** | Power analysis · supuestos · A/A 2.000 part. · test A/B · A/B multi-semilla · regresión en guardrail · efecto heterogéneo · clustered-SE · modelo de costes del MDE | MDE detectable **+2,3 %** · A/A calibrado · dilución **< 1 pp** · **MDE +3 % = break-even** |
 | **5 · Evaluation** | Significancia vs relevancia · ANCOVA · segmentos + BH · p-hacking | **+5,7 % (winsor) / +6,1 % (crudo)**, ambos IC > +3 % · guardrails intactos · efecto homogéneo → **LANZAR** |
-| **6 · Deployment** | Resumen ejecutivo · notebook · README · post LinkedIn | `docs/resumen_ejecutivo.md` · `notebooks/ab_test_olist.ipynb` |
+| **6 · Deployment** | Resumen ejecutivo · notebook · README · post LinkedIn | [`docs/resumen_ejecutivo.md`](docs/resumen_ejecutivo.md) · [`notebooks/ab_test_olist.ipynb`](notebooks/ab_test_olist.ipynb) |
 
 ### Hallazgos metodológicos del proyecto
 
@@ -61,7 +61,7 @@ Es el trabajo que hace un equipo de experimentación de producto.
 - **A n grande, cualquier regresión de guardrail es significativa** → la regla necesita **dos
   puertas** (significativo **Y** magnitud ≥ umbral), no una.
 - **El MDE de relevancia (+3 %) está derivado**, no asertado: es el *break-even* del rediseño
-  (`src/mde_cost_model.py`), válido para un marketplace con ≥ ~415 k pedidos/año.
+  ([`src/mde_cost_model.py`](src/mde_cost_model.py)), válido para un marketplace con ≥ ~415 k pedidos/año.
 
 ---
 
@@ -108,17 +108,19 @@ pytest                   # tests rápidos (config + efecto + invariantes de resu
 pytest -m slow           # además: re-ejecuta y comprueba idempotencia bit a bit
 ```
 
-`run_all.py` termina con un **informe de reproducibilidad** que comprueba, entre otros:
+[`run_all.py`](run_all.py) termina con un **informe de reproducibilidad** que comprueba, entre otros:
 decisión == LANZAR, tasa de falsos positivos del A/A en [3,5 %; 6,5 %], IC del A/B por encima del
 MDE, sin SRM, ningún guardrail degradado — y **sale con código ≠ 0** si algo no cuadra.
 
 ### Diseño reproducible
 
-- **Un solo parámetro que tocar:** todo vive en `params.yaml`, cargado por `src/config.py`. Ningún
-  otro módulo define `SEED`, `ALPHA`, la ventana temporal, etc. (hay un test que lo verifica).
-- **Un solo entrypoint:** `run_all.py` ejecuta las fases en orden de dependencia y falla si una no
-  genera sus salidas.
-- **Sin rutas de ejecución paralelas:** el notebook **solo lee** `outputs/`; no recalcula nada.
+- **Un solo parámetro que tocar:** todo vive en [`params.yaml`](params.yaml), cargado por
+  [`src/config.py`](src/config.py). Ningún otro módulo define `SEED`, `ALPHA`, la ventana temporal,
+  etc. (hay un test que lo verifica).
+- **Un solo entrypoint:** [`run_all.py`](run_all.py) ejecuta las fases en orden de dependencia y
+  falla si una no genera sus salidas.
+- **Sin rutas de ejecución paralelas:** el notebook **solo lee** [`outputs/`](outputs/); no
+  recalcula nada.
 - **Rutas absolutas:** funciona desde cualquier directorio de trabajo.
 - Semillas fijas → resultado determinista (`pytest -m slow` comprueba idempotencia bit a bit).
 

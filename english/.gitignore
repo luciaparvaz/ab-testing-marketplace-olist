@@ -1,0 +1,27 @@
+# Datos crudos (no se versionan por licencia CC BY-NC-SA de Olist; ver README)
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+env/
+
+# Jupyter
+*.nbconvert.ipynb
+
+# SO
+.DS_Store
+Thumbs.db
+
+# Export para NotebookLM (regenerable con notebooklm/_build_export.py)
+notebooklm/*.md
+notebooklm/*.pdf
+notebooklm/*_files/
+!notebooklm/_build_export.py
+notebooklm_export.zip

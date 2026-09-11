@@ -1,0 +1,2 @@
+n_control,n_treatment,ratio_treatment,chi2,p_value,veredicto
+47280,47423,0.50075,0.2159,0.6422,no SRM

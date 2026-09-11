@@ -1,0 +1,48 @@
+# Parameters of the simulated experiment and of the analysis.
+# SINGLE source of truth — edit here, never in the code.
+# Loaded by src/config.py; used by all scripts and the notebook.
+
+seed: 42
+alpha: 0.05                 # significance level, two-tailed test
+
+# --- Synthetic treatment effect (diluted model, docs/01 §1.7b) ---
+effect:
+  p_resp: 0.20              # fraction of treated units that respond to the redesign
+  delta_resp: 0.25          # multiplicative effect among responders (+25%)
+  eps_sd: 0.05              # Gaussian noise on each responder's effect
+  # ATE (mean effect) = p_resp * delta_resp = 0.05  -> computed in config.py
+
+# --- Business decision criterion ---
+mde_relevancia_pct: 3.0    # minimum AOV lift that justifies the cost (see cost_model)
+target_power: 0.80
+
+# --- Two-gate rule for guardrails (docs/01 §1.4; corrected after global audit §D19) ---
+# A guardrail blocks the launch only if it is significant after BH AND its magnitude exceeds the
+# business threshold (see modeling.py::run_ab_test). G4 has no declared magnitude threshold in the
+# original design ("relevant magnitude" left unquantified) -> it is kept with the significance
+# criterion only, explicitly declared as a known limitation.
+guardrail_thresholds:
+  g1_review_score_pts: 0.05
+  g2_cancelacion_pp: 0.2
+  g3_freight_share_of_aov_rise_pct: 20.0
+
+# --- Data preparation (Phase 3) ---
+window_start: "2017-01-01"
+window_end: "2018-09-01"   # exclusive -> includes up to 2018-08-31
+valid_status: [delivered, shipped, invoiced, approved, processing]
+winsor_q: 0.995            # winsorization of the primary metric ONLY for the significance test
+
+# --- Simulations (all with a fixed seed -> reproducible bit for bit) ---
+n_sim_aa: 2000             # A/A partitions for calibration
+n_sim_power: 1000          # replicates of the simulated power analysis
+n_sim_multiseed: 500       # replicates of the full A/B test (CI coverage)
+n_bootstrap: 10000
+
+# --- Cost model to derive the relevance MDE (illustrative) ---
+cost_model:
+  aov_base: 137.0
+  commission: 0.15                 # marketplace take rate on GMV
+  net_margin_on_commission: 0.80
+  build_cost: 250000               # R$, one-off build cost
+  maint_cost_year: 80000           # R$/year
+  payback_years: 2

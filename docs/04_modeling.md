@@ -128,7 +128,11 @@ una regresión se verifica en §4.7.
 ## 4.5 Barrido de decisión — las tres ramas de la regla §1.5
 
 Aplicando la regla lanzar / iterar / no lanzar a distintos tamaños de efecto inyectado
-(métrica primaria winsorizada, guardrails OK, split SEED = 42 con +1,2 % de desbalance basal):
+(métrica primaria winsorizada, guardrails OK, split SEED = 42 con +1,2 % de desbalance basal).
+**Esta tabla usa a propósito el MDE declarado (+3 %)** para demostrar que la regla alcanza sus tres
+ramas bajo un umbral fijo — no debe leerse como la decisión titular del proyecto, que en la Fase 5
+usa el *break-even* al volumen real del dataset (+21,2 %, muy por encima de +3 %) y por eso da
+ITERAR en la fila "5 % (declarado)" en vez de LANZAR (ver §5.6 y `evaluation.py`):
 
 | ATE inyectado | lift observado | IC 95 % | p-valor | **Decisión** |
 |---:|---:|---:|---:|:--:|
@@ -168,7 +172,8 @@ Se repite el **A/B completo** (re-split 50/50 + re-inyección del efecto diluido
    pero el IC **infra-cubre ligeramente** (0,92).
 3. **Implicación:** para el **contraste** (¿hay efecto? ¿supera el MDE?) la winsorización es
    preferible (más potencia, menos MSE). Para la **estimación puntual del tamaño** del efecto, el
-   crudo es insesgado. Se reportan ambos; la decisión (LANZAR) es idéntica bajo los dos.
+   crudo es insesgado. Se reportan ambos; bajo el MDE declarado la decisión es idéntica en los dos
+   (LANZAR); al break-even real del volumen del dataset, idéntica también (ITERAR, ver §5.6).
 
 Esto **cierra la debilidad "un solo split"** (auditoría global nº4): el estimador es fiable en
 repetición y los IC están (casi) bien calibrados.

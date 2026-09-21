@@ -27,7 +27,7 @@ from config import (ALPHA, ANALYTICAL_TABLE, ATE, DELTA_RESP, EPS_SD, GUARDRAIL_
                     OUT_FIGURES as FIG, OUT_TABLES as OUT_T,
                     P_RESP, PROC, RAW, SEED, TARGET_POWER, VALID_STATUS, WINDOW_END, WINDOW_START,
                     WINSOR_Q, apply_plot_style)
-from effect_model import inject_diluted_effect
+from effect_model import compute_winsor_cap, inject_diluted_effect, winsorize_outcome
 
 import matplotlib.pyplot as plt
 apply_plot_style()
@@ -278,8 +278,10 @@ def run_ab_test(df: pd.DataFrame) -> dict:
     # --- inject the effect into the primary metric (declared, SEED=42) ---
     df = df.copy()
     df["mv_effect"] = inject_diluted_effect(df["merch_value"].values, is_t, rng)
-    cap = df["merch_value_w"].max()
-    df["mv_effect_w"] = np.minimum(df["mv_effect"], cap)
+    # winsorization cap: single function, computed on merch_value PRE-effect
+    # (see effect_model.compute_winsor_cap for why this is not counterfactual leakage).
+    cap = compute_winsor_cap(df["merch_value"].values, WINSOR_Q)
+    df["mv_effect_w"] = winsorize_outcome(df["mv_effect"].values, cap)
 
     t = df[is_t]; c = df[~is_t]
     res = {"n_control": len(c), "n_treatment": len(t), "ATE_declared_pct": ATE * 100}
@@ -354,8 +356,8 @@ def run_ab_test(df: pd.DataFrame) -> dict:
         guard[k]["significant_after_BH"] = bool(r)
 
     # --- two-gate rule (significant AND magnitude >= threshold), §1.4 / audit D19 ---
-    # G4 has no quantified magnitude threshold in the design ("relevant magnitude") -> it is left
-    # with the significance criterion only, explicitly declared (see GUARDRAIL_THRESHOLDS).
+    # G4 now DOES have a quantified magnitude threshold (portfolio review, priority 4):
+    # GUARDRAIL_THRESHOLDS["g4_n_items_relative_drop_pct"], computed a few lines below.
     aov_diff_r = primary["Welch_winsor_p99.5"]["diff_abs_R$"]
     guard["G1_review_score"]["magnitude_exceeds_threshold"] = bool(
         guard["G1_review_score"]["diff"] <= -GUARDRAIL_THRESHOLDS["g1_review_score_pts"])
@@ -365,10 +367,14 @@ def run_ab_test(df: pd.DataFrame) -> dict:
         guard["G3_freight_value"]["diff"] > 0
         and aov_diff_r > 0
         and guard["G3_freight_value"]["diff"] >= GUARDRAIL_THRESHOLDS["g3_freight_share_of_aov_rise_pct"] / 100 * aov_diff_r)
-    guard["G4_n_items"]["magnitude_exceeds_threshold"] = None
-    guard["G4_n_items"]["threshold_note"] = ("no quantified magnitude threshold in the design (§1.4: "
-                                          "'relevant magnitude') -> blocks on significance alone, "
-                                          "declared as a known limitation")
+    g4_thresh_items = GUARDRAIL_THRESHOLDS["g4_n_items_relative_drop_pct"] / 100 * guard["G4_n_items"]["control"]
+    guard["G4_n_items"]["magnitude_threshold_items"] = round(g4_thresh_items, 4)
+    guard["G4_n_items"]["magnitude_exceeds_threshold"] = bool(
+        guard["G4_n_items"]["diff"] <= -g4_thresh_items)
+    guard["G4_n_items"]["threshold_note"] = (
+        f"quantified threshold (portfolio review, previously absent): drop >= "
+        f"{GUARDRAIL_THRESHOLDS['g4_n_items_relative_drop_pct']:.0f}% of control n_items "
+        f"(-{g4_thresh_items:.4f} items/order) -> no longer blocks on significance alone")
     for k in keys:
         mag = guard[k]["magnitude_exceeds_threshold"]
         guard[k]["blocks"] = bool(guard[k]["significant_after_BH"] and (True if mag is None else mag))
@@ -421,13 +427,13 @@ def decision_scenarios(df: pd.DataFrame) -> dict:
     Shows that the design reaches all three branches: launch / iterate / do not launch."""
     is_t = (df.group == "treatment").values
     x_raw = df["merch_value"].values        # inject on the raw metric, winsorize AFTER (same as run_ab_test)
-    cap = df["merch_value_w"].max()
-    base = np.minimum(x_raw, cap)[~is_t].mean()
+    cap = compute_winsor_cap(x_raw, WINSOR_Q)
+    base = winsorize_outcome(x_raw, cap)[~is_t].mean()
     rows = []
     for ate_pct in [0, 1, 2, 3, 4, 5, 8]:
         rng = np.random.default_rng(SEED)
         dr = ate_pct / 100 / P_RESP         # delta_resp for that ATE
-        xe = np.minimum(inject_diluted_effect(x_raw, is_t, rng, delta_resp=dr), cap)
+        xe = winsorize_outcome(inject_diluted_effect(x_raw, is_t, rng, delta_resp=dr), cap)
         diff, (lo, hi), _ = _welch_ci(xe[is_t], xe[~is_t])
         _, p = stats.ttest_ind(xe[is_t], xe[~is_t], equal_var=False)
         lift, lo_p, hi_p = diff / base * 100, lo / base * 100, hi / base * 100
@@ -455,7 +461,9 @@ def guardrail_regression_scenarios(df: pd.DataFrame) -> dict:
     is_t = (df.group == "treatment").values
     rs = df["review_score"].values.astype(float)
     base = np.nanmean(rs[~is_t])
-    THRESH = 0.05
+    # previously hardcoded (a loose 0.05); now reads from the same source of truth that
+    # run_ab_test uses for G1, so a threshold change in params.yaml propagates to both places.
+    THRESH = GUARDRAIL_THRESHOLDS["g1_review_score_pts"]
     rows = []
     for delta in [0.0, -0.03, -0.05, -0.08]:
         y = rs.copy()
@@ -532,30 +540,50 @@ def ab_multiseed(df: pd.DataFrame, n_seeds: int = N_SIM_MULTISEED) -> dict:
     """Audit §4 point 4 / improvement #3: repeat the FULL A/B test over many seeds
     (re-split + re-injection of the diluted effect) to measure the estimator's distribution and the
     real coverage of the 95% CI. Closes the weakness of the 'single split'.
-    Done on RAW and on WINSOR to isolate the effect of winsorization on the bias."""
+    Done on RAW and on WINSOR to isolate the effect of winsorization on the bias.
+
+    Audit §1.1/§5.2 (portfolio review, priority 1): besides the power to REJECT H0 (already
+    covered in `power_analysis`), this also measures the power of the FULL DECISION RULE (§1.5):
+    p<ALPHA is not enough, the 95% CI also has to be entirely above the relevance MDE (+3%). These
+    are different questions -- rejecting H0 does not imply the whole CI clears the MDE -- and
+    before this fix only the first one was reported, leaving the impression that the design is
+    "amply powered" for the business decision when that power had never actually been measured."""
     x = df["merch_value"].values.astype(float)
-    cap = df["merch_value_w"].max()
+    cap = compute_winsor_cap(x, WINSOR_Q)
 
     def _run(winsor: bool) -> dict:
         rng = np.random.default_rng(777)
         lifts = np.empty(n_seeds); covers = np.empty(n_seeds, bool); rej = np.empty(n_seeds, bool)
+        decisions = np.empty(n_seeds, dtype=object)
         for k in range(n_seeds):
             g = rng.random(len(x)) < 0.5
             xe = inject_diluted_effect(x, g, rng)
             if winsor:
-                xe = np.minimum(xe, cap)
+                xe = winsorize_outcome(xe, cap)
             diff, (lo, hi), _ = _welch_ci(xe[g], xe[~g])
             base = xe[~g].mean()
-            lifts[k] = diff / base * 100
-            covers[k] = (lo / base * 100) <= 5.0 <= (hi / base * 100)
-            rej[k] = stats.ttest_ind(xe[g], xe[~g], equal_var=False)[1] < ALPHA
+            lift_pct, lo_pct, hi_pct = diff / base * 100, lo / base * 100, hi / base * 100
+            p = stats.ttest_ind(xe[g], xe[~g], equal_var=False)[1]
+            lifts[k] = lift_pct
+            covers[k] = lo_pct <= 5.0 <= hi_pct
+            rej[k] = p < ALPHA
+            # decision rule §1.5, identical to decision_scenarios/run_ab_test: not just "p<ALPHA"
+            if p >= ALPHA or lift_pct <= 0:
+                decisions[k] = "DO NOT LAUNCH"
+            elif lo_pct > MDE_RELEVANCIA:
+                decisions[k] = "LAUNCH"
+            else:
+                decisions[k] = "ITERATE"
+        dec_counts = pd.Series(decisions).value_counts(normalize=True)
+        dec_rates = {d: round(float(dec_counts.get(d, 0.0)), 3) for d in ("LAUNCH", "ITERATE", "DO NOT LAUNCH")}
         return {"mean_lift_pct": round(float(lifts.mean()), 3),
                 "bias_pp": round(float(lifts.mean()) - ATE * 100, 3),
                 "lift_sd_pp": round(float(lifts.std(ddof=1)), 3),
                 "lift_p2.5_p97.5": [round(float(np.percentile(lifts, 2.5)), 2),
                                     round(float(np.percentile(lifts, 97.5)), 2)],
                 "CI95_coverage_of_+5pct": round(float(covers.mean()), 3),
-                "empirical_power": round(float(rej.mean()), 3)}
+                "empirical_power_reject_H0": round(float(rej.mean()), 3),
+                "decision_rate": dec_rates}
 
     crudo, winsor = _run(False), _run(True)
     return {
@@ -568,8 +596,16 @@ def ab_multiseed(df: pd.DataFrame, n_seeds: int = N_SIM_MULTISEED) -> dict:
                      f"({winsor['bias_pp']} pp) because it clips the treatment's high values more "
                      f"(multiplicative effect) -> coverage drops to "
                      f"{winsor['CI95_coverage_of_+5pct']:.0%}. That is the price of the variance "
-                     f"reduction; the (LAUNCH) decision is robust because both CIs clear +3%. "
-                     f"The +5.7% of the SEED=42 split falls within the p2.5-p97.5 range."),
+                     f"reduction. The +5.7% of the SEED=42 split falls within the p2.5-p97.5 range."),
+        "decision_rule_power_finding": (
+            f"The power to REJECT H0 ({winsor['empirical_power_reject_H0']:.0%}) is NOT the power "
+            f"of the full decision rule. With the winsorized cap, the gate "
+            f"'95% CI entirely > +3%' -> LAUNCH fires in {winsor['decision_rate']['LAUNCH']:.0%} "
+            f"of the 500 re-randomizations (ITERATE {winsor['decision_rate']['ITERATE']:.0%}, "
+            f"DO NOT LAUNCH {winsor['decision_rate']['DO NOT LAUNCH']:.0%}). The SEED=42 split "
+            f"(which did give LAUNCH) benefited from a favorable baseline imbalance -- it is not "
+            f"representative of the other half of re-randomizations. 'The design is amply powered' "
+            f"is true for H0, not for the business decision actually made."),
     }
 
 
@@ -594,9 +630,13 @@ def clustered_se_robustness() -> dict:
     # same diluted effect (SEED) at order level on the treated units
     rng = np.random.default_rng(SEED)
     is_t = o["treat"].values.astype(bool)
+    # winsorization cap: same function, same (pre-effect) semantics as run_ab_test/
+    # decision_scenarios/ab_multiseed -- this function used to recompute the cap on `mv_e`
+    # (POST-effect), which is the source of the two incompatible "winsorization bias" figures
+    # that fase4_resumen.json used to report (audit §2.1/§2.2).
+    cap = compute_winsor_cap(o["mv"].values, WINSOR_Q)
     o["mv_e"] = inject_diluted_effect(o["mv"].values, is_t, rng)
-    cap = o["mv_e"].quantile(WINSOR_Q)
-    o["mv_e"] = np.minimum(o["mv_e"], cap)
+    o["mv_e"] = winsorize_outcome(o["mv_e"].values, cap)
     base = o.loc[~is_t, "mv_e"].mean()
 
     X = np.column_stack([np.ones(len(o)), o["treat"].values])

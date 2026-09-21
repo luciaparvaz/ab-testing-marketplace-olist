@@ -231,8 +231,9 @@
         "umbral_alarma": "caída significativa",
         "p_ajustado_BH": 0.772,
         "significativo_tras_BH": false,
-        "magnitud_supera_umbral": null,
-        "nota_umbral": "sin umbral de magnitud cuantificado en el diseño (§1.4: 'magnitud relevante') -> bloquea solo por significancia, declarado como limitación conocida",
+        "umbral_magnitud_items": 0.057,
+        "magnitud_supera_umbral": false,
+        "nota_umbral": "umbral cuantificado (revisión de portfolio, antes ausente): caída >= 5% del n_items de control (-0.0570 ítems/pedido) -> ya no bloquea solo por significancia",
         "bloquea": false
       }
     },
@@ -377,7 +378,12 @@
         7.07
       ],
       "cobertura_IC95_del_+5pct": 0.942,
-      "potencia_empirica": 0.998
+      "potencia_empirica_rechazar_H0": 0.998,
+      "tasa_decision": {
+        "LANZAR": 0.494,
+        "ITERAR": 0.504,
+        "NO LANZAR": 0.002
+      }
     },
     "winsor_p99.5": {
       "lift_medio_pct": 4.64,
@@ -388,18 +394,24 @@
         6.21
       ],
       "cobertura_IC95_del_+5pct": 0.92,
-      "potencia_empirica": 1.0
+      "potencia_empirica_rechazar_H0": 1.0,
+      "tasa_decision": {
+        "LANZAR": 0.504,
+        "ITERAR": 0.496,
+        "NO LANZAR": 0.0
+      }
     },
-    "hallazgo": "En CRUDO el estimador es INSESGADO (sesgo -0.031 pp) y el IC 95% cubre el valor real el 94% de las veces (nominal 95%). La WINSORIZACIÓN introduce un pequeño sesgo NEGATIVO (-0.36 pp) porque recorta más los valores altos del treatment (efecto multiplicativo) -> la cobertura baja a 92%. Es el precio de la reducción de varianza; la decisión (LANZAR) es robusta porque ambos IC superan el +3%. El +5,7% del split SEED=42 está dentro del rango p2,5-p97,5."
+    "hallazgo": "En CRUDO el estimador es INSESGADO (sesgo -0.031 pp) y el IC 95% cubre el valor real el 94% de las veces (nominal 95%). La WINSORIZACIÓN introduce un pequeño sesgo NEGATIVO (-0.36 pp) porque recorta más los valores altos del treatment (efecto multiplicativo) -> la cobertura baja a 92%. Es el precio de la reducción de varianza. El +5,7% del split SEED=42 está dentro del rango p2,5-p97,5.",
+    "hallazgo_potencia_de_la_decision": "La potencia de RECHAZAR H0 (100%) NO es la potencia de la regla de decisión completa. Con el cap winsorizado, la puerta 'IC95% entero > +3%' -> LANZAR se activa en el 50% de las 500 re-aleatorizaciones (ITERAR 50%, NO LANZAR 0%). El split SEED=42 (que sí dio LANZAR) se benefició de un desbalance basal favorable en la métrica primaria -- no es representativo de la mitad de las re-aleatorizaciones. 'El diseño está sobradamente potenciado' es cierto para H0, no para la decisión de negocio que realmente se toma."
   },
   "9_clustered_se": {
     "n_pedidos_sin_dedup": 97905,
     "n_clientes": 94703,
-    "lift_pct_todos_los_pedidos": 5.713,
+    "lift_pct_todos_los_pedidos": 5.686,
     "lift_pct_dedup_1_pedido_cliente_ref": 5.666,
-    "SE_robusto_sin_clustering_R$": 1.1235,
-    "SE_cluster_por_cliente_R$": 1.136,
-    "inflacion_SE_por_clustering_pct": 1.11,
+    "SE_robusto_sin_clustering_R$": 1.1142,
+    "SE_cluster_por_cliente_R$": 1.1267,
+    "inflacion_SE_por_clustering_pct": 1.12,
     "hallazgo": "con TODOS los pedidos + SE por clúster de cliente, el SE es prácticamente idéntico al de la versión deduplicada (el 97% de clientes tiene 1 pedido -> el clustering apenas infla el SE, ~1%). El lift puntual difiere un poco porque incluye ~3.200 pedidos extra de clientes recurrentes, pero la conclusión (significativo, IC sobre el MDE) no cambia. Deduplicar fue la opción simple y correcta."
   }
 }

@@ -32,7 +32,15 @@
       590655
     ],
     "uplift_marketplace_revenue_annual_R$_assuming_15pct_commission": 68413,
-    "note": "GMV = merchandise value. The marketplace's revenue is a commission (take rate) on the GMV; 15% is assumed for illustrative purposes. Linear extrapolation of the per-order lift to the historical annual volume."
+    "note": "GMV = merchandise value. The marketplace's revenue is a commission (take rate) on the GMV; 15% is assumed for illustrative purposes. Linear extrapolation of the per-order lift to the historical annual volume.",
+    "MDE_vs_volume_consistency": {
+      "declared_MDE_pct": 3.0,
+      "volume_used_in_extrapolation_orders_year": 58743,
+      "min_volume_for_+3pct_MDE_to_break_even": 415653,
+      "MDE_break_even_AT_REAL_dataset_volume_pct": 21.23,
+      "real_volume_is_consistent_with_declared_MDE": false,
+      "reading": "The +3.0% MDE used as the relevance gate (§1.5) is only break-even from ~415,653 orders/year. The impact above is extrapolated over ~58,743 orders/year (this dataset's REAL volume) -- at that scale, the project's own cost model requires a break-even of ~+21.2%, not +3.0%. The +3% MDE only makes sense as a decision threshold if you implicitly assume a marketplace ~7x larger than Olist in this dataset; at the real scale, neither the true injected lift (+5%) nor the one observed in the SEED=42 split (~+5.7%) clears the real break-even. See '6_decision' for how this conditions the final recommendation."
+    }
   },
   "3_ancova": {
     "unadjusted": {
@@ -170,18 +178,21 @@
     "lesson": "(1) At LEVEL scale several 'segments where the effect differs' survive even BH and Bonferroni: they are NOT chance, they are a MECHANICAL ARTIFACT of the multiplicative effect (the lift in R$ is larger in large baskets), concentrated in the cuts correlated with size (freight quartiles). (2) At LOG scale (the relative effect, which is the business question) only chance-level nominal findings remain, and NONE survives the correction. Moral: (a) test the correct magnitude (%, not absolute R$), (b) pre-specify segments, (c) correct for multiplicity. Correcting is not enough if the estimand is wrong to begin with."
   },
   "6_decision": {
-    "decision": "LAUNCH",
+    "decision": "ITERATE",
+    "decision_under_declared_MDE_+3pct_ignoring_volume": "LAUNCH",
     "justification": [
       "Primary effect +5.67% (95% CI [3.99, 7.34]), log10(p) = -10.51 -> highly significant.",
-      "95% CI entirely above the relevance MDE (+3.0%) -> relevant for the business.",
+      "At the dataset's REAL volume (~58,743 orders/year), the cost model's break-even is +21.2% (not the declared +3.0%, calibrated for a much larger marketplace) -> the 95% CI of the effect does NOT clear that real threshold entirely.",
       "No guardrail degraded (Phase 4, Benjamini-Hochberg).",
       "Homogeneous effect across pre-specified segments (no interaction after BH).",
       "Covariate-adjusted estimate (ANCOVA): +5.193% with SE 11.23% lower.",
-      "Estimated impact: +R$ 456,084/year of merchandise GMV (CI [321,514, 590,655])."
+      "Estimated impact: +R$ 456,084/year of merchandise GMV (CI [321,514, 590,655]) -- insufficient to cover the redesign's cost (R$ 410,000 over 2 years) at the dataset's real volume."
     ],
     "caveats": [
       "The effect is synthetic and declared: this 'decision' validates the process, not a real finding.",
-      "The point estimate (+5.7%) exceeds the injected ATE (+5%) because of the split's baseline imbalance (+1.2%, not significant); the CI covers it."
+      "The point estimate exceeds the injected ATE (+5%) because of the split's baseline imbalance (see balance_check.py, now includes merch_value in the formal table); the CI covers it.",
+      "The power of this decision rule (not just of rejecting H0) is measured in fase4_resumen.json::8_ab_multiseed -- under the declared MDE, the 'LAUNCH' gate only fires in a fraction of re-randomizations, not always (see 'decision_rule_power_finding').",
+      "The +3% MDE is not wrong in itself -- it is the correct threshold if the marketplace had ~415k+ orders/year. The problem is publishing a business decision that mixes that threshold with an R$ impact computed over a volume ~7x smaller."
     ]
   }
 }

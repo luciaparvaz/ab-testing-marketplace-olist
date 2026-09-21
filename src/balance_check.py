@@ -19,7 +19,13 @@ import matplotlib.pyplot as plt
 from config import ANALYTICAL_TABLE, OUT_FIGURES as FIG, OUT_TABLES as OUT_T
 
 CAT_COVARS = ["customer_state", "cat_dominante", "payment_type", "mes_compra"]
-NUM_COVARS = ["n_items", "freight_value"]
+# merch_value (revisión de portfolio, cierra §D6/prioridad 4): la métrica PRIMARIA no estaba en la
+# tabla formal de balance -- solo se imprimía por stdout como "chequeo A/A puntual" al final de este
+# script, sin entrar en fase3_balance.csv ni en el criterio |SMD|<0.10. Es precisamente el
+# desbalance basal de esta variable (~+1,2pp en el split SEED=42) el que explica gran parte de por
+# qué el lift observado en la Fase 4 (+5,7%) supera al efecto verdadero inyectado (+5%) -- debía
+# estar en la tabla de balance desde el principio, no solo en un print aparte.
+NUM_COVARS = ["n_items", "freight_value", "merch_value"]
 
 
 def smd_continuous(a: pd.Series, b: pd.Series) -> float:

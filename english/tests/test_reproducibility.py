@@ -11,7 +11,7 @@ import pandas as pd
 import pytest
 
 import config
-from effect_model import inject_diluted_effect
+from effect_model import compute_winsor_cap, inject_diluted_effect, winsorize_outcome
 
 pytestmark = pytest.mark.slow
 
@@ -28,8 +28,8 @@ def _primary_lift(df):
     is_t = (df.group == "treatment").values
     rng = np.random.default_rng(config.SEED)
     mv = inject_diluted_effect(df["merch_value"].values, is_t, rng)
-    cap = df["merch_value_w"].max()
-    mvw = np.minimum(mv, cap)
+    cap = compute_winsor_cap(df["merch_value"].values, config.WINSOR_Q)
+    mvw = winsorize_outcome(mv, cap)
     t, c = mvw[is_t], mvw[~is_t]
     lift = t.mean() / c.mean() - 1
     p = stats.ttest_ind(t, c, equal_var=False)[1]

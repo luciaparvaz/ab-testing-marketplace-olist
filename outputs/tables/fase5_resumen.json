@@ -32,7 +32,15 @@
       590655
     ],
     "uplift_ingreso_marketplace_anual_R$_asumiendo_comision_15pct": 68413,
-    "nota": "GMV = valor de mercancía. El ingreso del marketplace es una comisión (take rate) sobre el GMV; se asume 15% a efectos ilustrativos. Extrapolación lineal del lift por pedido al volumen anual histórico."
+    "nota": "GMV = valor de mercancía. El ingreso del marketplace es una comisión (take rate) sobre el GMV; se asume 15% a efectos ilustrativos. Extrapolación lineal del lift por pedido al volumen anual histórico.",
+    "consistencia_MDE_vs_volumen": {
+      "MDE_declarado_pct": 3.0,
+      "volumen_usado_en_la_extrapolacion_pedidos_anio": 58743,
+      "volumen_minimo_para_que_MDE_+3pct_sea_break_even": 415653,
+      "MDE_break_even_AL_VOLUMEN_REAL_del_dataset_pct": 21.23,
+      "volumen_real_es_consistente_con_MDE_declarado": false,
+      "lectura": "El MDE de +3.0% usado como puerta de relevancia (§1.5) solo es break-even a partir de ~415,653 pedidos/año. El impacto de arriba se extrapola sobre ~58,743 pedidos/año (el volumen REAL del dataset) -- a esa escala, el propio modelo de costes del proyecto exige un break-even de ~+21.2%, no +3.0%. El MDE de +3% solo tiene sentido como umbral de decisión si se asume implícitamente un marketplace ~7x mayor que Olist en este dataset; a la escala real, ni el lift verdadero inyectado (+5%) ni el observado en el split SEED=42 (~+5,7%) superan el break-even real. Ver '6_decision' para cómo esto condiciona la recomendación final."
+    }
   },
   "3_ancova": {
     "sin_ajuste": {
@@ -170,18 +178,21 @@
     "leccion": "(1) En NIVEL varios 'segmentos donde el efecto es distinto' sobreviven incluso a BH y a Bonferroni: NO son casualidad, son un ARTEFACTO MECÁNICO del efecto multiplicativo (el lift en R$ es mayor en cestas grandes), concentrado en los cortes correlacionados con el tamaño (cuartiles de flete). (2) En LOG (el efecto relativo, que es la pregunta de negocio) solo quedan hallazgos nominales de nivel-azar, y NINGUNO sobrevive a la corrección. Moraleja: (a) testar la magnitud correcta (%, no R$ absolutos), (b) pre-especificar segmentos, (c) corregir por multiplicidad. Corregir no basta si el estimando está mal."
   },
   "6_decision": {
-    "decision": "LANZAR",
+    "decision": "ITERAR",
+    "decision_bajo_MDE_declarado_+3pct_ignorando_volumen": "LANZAR",
     "justificacion": [
       "Efecto primario +5.67% (IC95 [3.99, 7.34]), log10(p) = -10.51 -> muy significativo.",
-      "IC 95 % completamente por encima del MDE de relevancia (+3.0%) -> relevante para negocio.",
+      "Al volumen REAL del dataset (~58,743 pedidos/año), el break-even del modelo de costes es +21.2% (no el +3.0% declarado, calibrado para un marketplace mucho mayor) -> el IC 95% del efecto NO queda enteramente por encima de ese umbral real.",
       "Ningún guardrail degradado (Fase 4, Benjamini-Hochberg).",
       "Efecto homogéneo entre segmentos pre-especificados (sin interacción tras BH).",
       "Estimación ajustada por covariables (ANCOVA): +5.193% con SE 11.23% menor.",
-      "Impacto estimado: +R$ 456,084/año de GMV de mercancía (IC [321,514, 590,655])."
+      "Impacto estimado: +R$ 456,084/año de GMV de mercancía (IC [321,514, 590,655]) -- insuficiente para cubrir el coste del rediseño (R$ 410,000 a 2 años) al volumen real del dataset."
     ],
     "caveats": [
       "El efecto es sintético y declarado: esta 'decisión' valida el proceso, no un hallazgo real.",
-      "El estimador puntual (+5,7%) supera el ATE inyectado (+5%) por el desbalance basal del split (+1,2%, no significativo); el IC lo cubre."
+      "El estimador puntual supera el ATE inyectado (+5%) por el desbalance basal del split (ver balance_check.py, ahora incluye merch_value en la tabla formal); el IC lo cubre.",
+      "La potencia de esta regla de decisión (no solo de rechazar H0) se mide en fase4_resumen.json::8_ab_multiseed -- con el umbral del MDE declarado, la puerta 'LANZAR' solo se activa en una fracción de las re-aleatorizaciones, no siempre (ver 'hallazgo_potencia_de_la_decision').",
+      "El MDE de +3% no es incorrecto en sí mismo -- es el umbral correcto si el marketplace tuviera ~415k+ pedidos/año. El problema es publicar una decisión de negocio que mezcla ese umbral con un impacto en R$ calculado sobre un volumen ~7x menor."
     ]
   }
 }

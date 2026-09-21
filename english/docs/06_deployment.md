@@ -21,9 +21,12 @@ Refactored after the user's review ("it's not reproducible if it's all in a note
   other module defines `SEED`, `ALPHA`, the time window, the cost model, etc. (`tests/
   test_config.py` verifies this with an AST analysis).
 - **Single entrypoint:** `python run_all.py` runs the 6 phases in dependency order, checks that
-  each one generates its outputs, and finishes with a **reproducibility report** (decision ==
-  LAUNCH, A/A ~5%, A/B CI above the MDE, no SRM, guardrails intact, ...). It exits with code ≠ 0
-  if something doesn't check out. ~2 min.
+  each one generates its outputs, and finishes with a **reproducibility report** (the decision is
+  one of LAUNCH/ITERATE/DO NOT LAUNCH with a justification and is consistent with the real-volume
+  break-even — previously the check was literally `decision == LAUNCH`, a non-falsifiable
+  acceptance criterion fixed on the outcome, see `tests/test_outputs.py`; A/A ~5%, A/B CI above
+  the MDE, no SRM, guardrails intact, ...). It exits with code ≠ 0 if something doesn't check out.
+  ~1-2 min.
 - **No parallel execution paths:** the `ab_test_olist.ipynb` notebook **only reads** `outputs/`
   and shows figures + narrative; it recomputes nothing. It used to have a second computation path
   (it called `modeling.main()` etc.), which was the valid criticism.

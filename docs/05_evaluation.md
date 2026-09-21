@@ -134,22 +134,43 @@ de flete, trimestres). Test: interacción `treat × corte`, Wald **HC3**. Espera
 
 ## 5.6 Decisión de producto
 
-# 🟢 LANZAR
+# 🟡 ITERAR
+
+*(Revisión de portfolio: antes esta sección decía "🟢 LANZAR" — ver el bloque siguiente para por
+qué cambió y con qué código se corrigió.)*
 
 | Criterio | ✔ |
 |---|---|
 | Efecto primario significativo (p ≈ 3·10⁻¹¹) | ✅ |
-| IC 95 % del lift enteramente por encima del MDE de relevancia (+3 %) | ✅ [+3,99 % ; +7,34 %] |
+| IC 95 % del lift enteramente por encima del MDE **declarado** (+3 %) | ✅ [+3,99 % ; +7,34 %] |
+| IC 95 % del lift enteramente por encima del *break-even* **al volumen real** del dataset (+21,2 %) | ❌ — el lift observado (+5,7 %) queda muy por debajo |
 | Estimación robusta (winsor, log, bootstrap, ANCOVA todas concordantes) | ✅ |
 | Ningún guardrail degradado (G1–G4, Benjamini-Hochberg) | ✅ |
 | Efecto relativo homogéneo entre segmentos pre-especificados | ✅ |
-| Impacto económico material (+R$ 456 k/año GMV) | ✅ |
+| Impacto económico material (+R$ 456 k/año GMV) frente al coste del rediseño (~R$ 410k/2 años) | ⚠️ insuficiente al volumen real del dataset |
+
+**Por qué cambió la decisión (corrección de portfolio, no un nuevo dato):** el MDE de +3 % es el
+*break-even* correcto solo para un marketplace con ≥ ~415.000 pedidos/año
+([`src/mde_cost_model.py`](../src/mde_cost_model.py)). El impacto en R$ de arriba se calcula sobre
+el volumen **real** de este dataset (~58,7 k pedidos/año, ~7× menor), al que el mismo modelo de
+costes exige un break-even de **+21,2 %** — muy por encima tanto del efecto verdadero (+5 %) como
+del observado (+5,7 %). La primera versión de esta sección aplicaba el criterio "IC > +3 %" y
+concluía LANZAR sin cruzarlo con el volumen al que ese +3 % es válido; `evaluation.py` ahora calcula
+esa comparación explícitamente (`2_impacto_negocio.consistencia_MDE_vs_volumen` en
+[`outputs/tables/fase5_resumen.json`](../outputs/tables/fase5_resumen.json)) y la decisión titular
+usa el break-even real, no el declarado sin ajustar.
 
 **Caveats declarados:**
 - El efecto es **sintético y conocido**: esta decisión **valida el proceso de decisión**, no
   constituye un hallazgo real sobre Olist.
-- Con un ATE inyectado de +2 % o +3 %, la misma regla habría devuelto **ITERAR** (efecto real pero
-  IC tocando el MDE); con +0 %, **NO LANZAR** (Fase 4 §4.5). Las tres ramas funcionan.
+- Con un ATE inyectado de +2 % o +3 % y evaluado bajo el MDE **declarado** (no el ajustado por
+  volumen), la misma regla habría devuelto **ITERAR** (efecto real pero IC tocando el MDE); con
+  +0 %, **NO LANZAR** (Fase 4 §4.5) — la tabla de esa sección usa el MDE declarado a propósito,
+  como demostración de que las tres ramas funcionan, y no debe confundirse con la decisión titular
+  de esta sección, que usa el break-even real.
+- La **potencia de la propia regla de decisión** (no solo la de rechazar H0) se mide en Fase 4
+  §6.8/`ab_multiseed`: bajo el MDE declarado, la puerta "LANZAR" solo se activa en ~50 % de 500
+  re-aleatorizaciones. El *split* SEED=42 no es representativo de la mitad de los casos.
 
 ---
 
@@ -175,6 +196,7 @@ de flete, trimestres). Test: interacción `treat × corte`, Wald **HC3**. Espera
 - [x] ANCOVA: −11,2 % de SE, estimador más cerca del valor real.
 - [x] Segmentos pre-especificados + BH: **sin heterogeneidad**.
 - [x] p-hacking demostrado (nivel vs log; BH vs Bonferroni).
-- [x] **Decisión: LANZAR**, con las tres ramas de la regla verificadas.
+- [x] **Decisión: ITERAR** (el efecto es real pero no supera el break-even al volumen real del
+  dataset), con las tres ramas de la regla verificadas y la potencia de la propia regla medida.
 - **Siguiente (Fase 6 — Deployment):** resumen ejecutivo de 1 página, notebook reproducible con
   narrativa, README de GitHub, borrador de post de LinkedIn.

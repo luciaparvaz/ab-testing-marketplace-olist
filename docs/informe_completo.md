@@ -45,8 +45,11 @@ la significancia estadística de la relevancia de negocio y resiste el *p-hackin
 **Resultado principal.** El test A/B estima un incremento del AOV de **+5,7 %** (métrica primaria
 winsorizada; IC 95 % [+4,0 %; +7,3 %]; p ≈ 3·10⁻¹¹) o **+6,1 %** en la métrica sin winsorizar
 (IC 95 % [+4,1 %; +8,1 %]). Ambos intervalos contienen el efecto verdadero inyectado (+5 %) y quedan
-**enteramente por encima** del umbral de relevancia de negocio (+3 %). Ningún guardrail se degrada y
-el efecto es homogéneo entre segmentos. La regla de decisión devuelve **LANZAR**.
+enteramente por encima del MDE **declarado** (+3 %) — pero ese +3 % solo es el *break-even* correcto
+para un marketplace con ≥ ~415.000 pedidos/año, y el impacto económico de este proyecto se calcula
+sobre el volumen **real** del dataset (~58,7k pedidos/año), al que el break-even real es **+21,2 %**
+(§10, limitación nº 3). Ningún guardrail se degrada y el efecto es homogéneo entre segmentos, pero
+con el umbral correcto para este volumen, la regla de decisión devuelve **ITERAR**, no LANZAR.
 
 **Hallazgos metodológicos** (subproductos del ejercicio, no de Olist):
 
@@ -116,8 +119,10 @@ prominente en todos los entregables.
   `effect_model.py` (el efecto sintético, compartido).
 - **`run_all.py`** — único *entrypoint*: ejecuta las seis fases en orden, verifica que cada una
   genera sus salidas y termina con un **informe de reproducibilidad** que comprueba 10 invariantes
-  (decisión == LANZAR, tasa de falsos positivos del A/A en [3,5 %; 6,5 %], IC del A/B por encima del
-  MDE, sin SRM, guardrails intactos…). Sale con código ≠ 0 si algo falla. ~2 min.
+  (la decisión es una de LANZAR/ITERAR/NO LANZAR, justificada y consistente con el break-even al
+  volumen real — antes el check era `decisión == LANZAR`, un criterio de aceptación fijado sobre el
+  resultado, no falsable; tasa de falsos positivos del A/A en [3,5 %; 6,5 %], IC del A/B por encima
+  del MDE, sin SRM, guardrails intactos…). Sale con código ≠ 0 si algo falla. ~1-2 min.
 - **`notebooks/ab_test_olist.ipynb`** — capa de **presentación**: solo lee `outputs/` y muestra
   figuras y narrativa; no calcula nada.
 - **`tests/`** — `pytest` (rápidos) + `pytest -m slow` (re-ejecuta y comprueba idempotencia bit a
@@ -232,8 +237,11 @@ pedidos**:
 | 1 000 000 | +1,25 % |
 | 5 000 000 | +0,25 % |
 
-Conclusión: el **+3 % es válido para un marketplace con ≥ ~415 000 pedidos/año**. El proyecto asume
-esa escala (marketplace de tamaño medio-grande). Figura: `outputs/figures/f_mde_breakeven.png`.
+Conclusión: el **+3 % es válido para un marketplace con ≥ ~415 000 pedidos/año**. El volumen real de
+este dataset (~58,7k pedidos/año) es **~7× menor** que eso — una versión anterior de este informe
+asumía sin comprobarlo que el proyecto operaba a la escala que el +3 % requiere; no es así, y §7.6 /
+§9.7 usan el break-even correcto para el volumen real (+21,2 %) en la decisión titular, no el +3 %.
+Figura: `outputs/figures/f_mde_breakeven.png`.
 
 ### 3.8 Decisión D6 — Regla de decisión de producto
 
@@ -552,7 +560,10 @@ verifica aparte (§6.8).
 ### 6.7 Barrido de decisión — las tres ramas de la regla
 
 Aplicando la regla LANZAR / ITERAR / NO LANZAR a distintos tamaños de efecto inyectado (métrica
-primaria winsorizada; guardrails OK; este *split* tiene +1,2 % de desbalance basal):
+primaria winsorizada; guardrails OK; este *split* tiene +1,2 % de desbalance basal). Igual que en
+§4.5, esta tabla usa a propósito el MDE **declarado** (+3 %) para demostrar que la regla alcanza sus
+tres ramas — la decisión titular del proyecto (§7.6/§9.7) usa en cambio el break-even al **volumen
+real** del dataset (+21,2 %), por lo que la fila "5 % (declarado)" da ITERAR allí, no LANZAR:
 
 | ATE inyectado | lift observado | IC 95 % | p-valor | **Decisión** |
 |---:|---:|---:|---:|:--:|
@@ -694,23 +705,33 @@ de flete, trimestres). Test: interacción `treat × corte`, Wald HC3. Esperados 
 
 ### 7.6 Decisión de producto
 
-> # 🟢 LANZAR
+> # 🟡 ITERAR
+>
+> *(Revisión de portfolio: esta sección decía originalmente "🟢 LANZAR" — el criterio usaba el MDE
+> declarado sin comprobar a qué volumen es válido. Ver el caveat de break-even más abajo y §10,
+> limitación nº 3.)*
 
 | Criterio | ✔ |
 |---|---|
 | Efecto primario significativo (p ≈ 3·10⁻¹¹) | ✅ |
-| IC 95 % del *lift* enteramente por encima del MDE (+3 %) | ✅ [+3,99 %; +7,34 %] |
+| IC 95 % del *lift* enteramente por encima del MDE **declarado** (+3 %) | ✅ [+3,99 %; +7,34 %] |
+| IC 95 % del *lift* enteramente por encima del *break-even* **al volumen real** (+21,2 %) | ❌ |
 | Estimación robusta (winsor, log, bootstrap, ANCOVA todas concordantes) | ✅ |
 | Ningún guardrail degradado (G1–G4, Benjamini-Hochberg) | ✅ |
 | Efecto relativo homogéneo entre segmentos pre-especificados | ✅ |
-| Impacto económico material (+R$ 456 k/año GMV) | ✅ |
+| Impacto económico (+R$ 456 k/año GMV) vs. coste del rediseño (~R$ 410k/2 años) | ⚠️ insuficiente al volumen real |
 
 **Caveats declarados:**
 
 - El efecto es **sintético y conocido**: esta decisión **valida el proceso de decisión**, no
   constituye un hallazgo real sobre Olist.
-- Con un ATE inyectado de +2 % o +3 %, la misma regla habría devuelto **ITERAR**; con +0 %,
-  **NO LANZAR**. Las tres ramas funcionan.
+- El MDE de +3 % es el break-even correcto solo para un marketplace con ≥ ~415.000 pedidos/año; el
+  impacto en R$ de arriba se calcula sobre el volumen real del dataset (~58,7k/año, ~7× menor), al
+  que el break-even real es +21,2 %. Mezclar ambas escalas —el error de la versión anterior de esta
+  sección— es lo que corrige esta revisión.
+- Con un ATE inyectado de +2 % o +3 % y evaluado bajo el MDE **declarado**, la misma regla habría
+  devuelto **ITERAR**; con +0 %, **NO LANZAR**. Las tres ramas funcionan (§4.5 usa el MDE declarado
+  a propósito para demostrarlo; no confundir con la decisión titular de esta sección).
 
 **Qué vigilar tras un lanzamiento real:** el AOV a 4 semanas frente al +3 % mínimo; la tasa de
 devoluciones y reclamaciones (no medibles en Olist); revisar de nuevo a los 90 días para descartar
@@ -871,17 +892,22 @@ nominales, ninguno de los cuales sobrevivió a la corrección por multiplicidad.
 
 ### 9.7 Traducción a decisión de producto
 
-El efecto primario es **estadísticamente significativo** (p ≈ 3·10⁻¹¹) y, sobre todo,
-**materialmente relevante**: el intervalo de confianza al 95 % del incremento del AOV se sitúa
-enteramente por encima del umbral de relevancia de negocio (+3 %), derivado del modelo de
-*break-even*. La estimación es robusta a la especificación (winsorización, escala logarítmica,
+El efecto primario es **estadísticamente significativo** (p ≈ 3·10⁻¹¹) y su intervalo de confianza
+al 95 % se sitúa enteramente por encima del umbral de relevancia de negocio **declarado** (+3 %),
+derivado del modelo de *break-even*. Pero ese +3 % solo es el break-even correcto para un
+marketplace con ≥ ~415.000 pedidos/año, y el impacto económico de abajo se calcula sobre el volumen
+**real** del dataset (~58,7k pedidos/año, ~7× menor) — al que el mismo modelo exige un break-even de
+**+21,2 %**. La estimación es robusta a la especificación (winsorización, escala logarítmica,
 bootstrap y ajuste por covariables producen conclusiones concordantes), ninguna métrica de control
 se degrada y el efecto es homogéneo entre los segmentos pre-especificados. El impacto económico
 estimado, bajo extrapolación lineal al volumen anual histórico, asciende a **+R$ 456 000 anuales de
-valor de mercancía** (IC 95 % [+R$ 322 000; +R$ 591 000]). En consecuencia, la regla de decisión
-devuelve **LANZAR**. Un barrido de la regla sobre distintos tamaños de efecto confirma que las tres
+valor de mercancía** (IC 95 % [+R$ 322 000; +R$ 591 000]) — frente a un coste del rediseño de
+~R$ 410 000 a dos años, insuficientemente cubierto a este volumen. Aplicando el umbral de relevancia
+que corresponde al volumen real (no el declarado sin ajustar), la regla de decisión devuelve
+**ITERAR**, no LANZAR. Un barrido de la regla sobre distintos tamaños de efecto (§4.5, bajo el MDE
+declarado, para aislar el comportamiento de la regla del ajuste de volumen) confirma que las tres
 decisiones posibles (NO LANZAR, ITERAR, LANZAR) son alcanzables, y que un efecto de +2 % o +3 %
-habría conducido a "ITERAR".
+habría conducido a "ITERAR" incluso bajo ese MDE sin ajustar.
 
 ---
 
@@ -894,10 +920,11 @@ Síntesis consolidada de las tres auditorías del proyecto (`docs/auditoria_fase
 |---|---|---|---|---|
 | 1 | **El experimento es simulado** → validez externa nula. El proyecto no describe nada real sobre Olist. | Alta (es el planteamiento) | **Sí** | Declarada en todos los entregables; el proyecto valida el *proceso*. |
 | 2 | **El modelo del efecto condiciona resultados.** Dos elecciones importan: (a) los respondedores se sortean al azar → la homogeneidad entre segmentos está en parte "horneada" en el diseño; (b) el efecto es multiplicativo → genera el artefacto que explota la demo de p-hacking. Un modelo de la barra de envío gratis concentraría el efecto por debajo de un umbral (efecto heterogéneo real). | Media | Parcial | Consecuencias analizadas explícitamente; §6.8 añade una variante heterogénea y muestra que el diseño la detecta. |
-| 3 | **MDE de relevancia = +3 %.** | Media | No | **Resuelta**: `src/mde_cost_model.py` lo deriva de un *break-even*; válido para volumen ≥ ~415 000 pedidos/año. |
-| 4 | **Un solo *split* de análisis** (SEED 42), con +1,2 % de desbalance basal que infla el estimador puntual. | Baja-Media | No | **Resuelta**: §6.8 A/B multi-semilla (500) → crudo insesgado, cobertura del IC 0,94. |
-| 5 | **Guardrails sin efecto inyectado** → "no degradación" trivialmente cierta; no demostraría por sí sola que los tests cazarían una regresión. | Media | No | **Resuelta**: §6.8 inyecta regresiones en G1 y verifica la regla de dos puertas. |
+| 3 | **MDE de relevancia = +3 %, pero solo válido a partir de ~415 000 pedidos/año.** El impacto en R$ de la Fase 5 se extrapola sobre el volumen real del dataset (~58,7k pedidos/año), ~7× menor -- a esa escala el break-even real es +21,2 %, no +3 %. Publicar "LANZAR" mezclando ambas escalas era una contradicción interna sin resolver. | Alta (afecta la decisión titular) | No | **Resuelta** (revisión de portfolio): `evaluation.py` compara explícitamente el volumen de la extrapolación contra el volumen mínimo que exige el MDE declarado (`2_impacto_negocio.consistencia_MDE_vs_volumen`) y usa el break-even **al volumen real** para decidir. La decisión pasó de LANZAR a **ITERAR**. |
+| 4 | **Un solo *split* de análisis** (SEED 42), con +1,2 % de desbalance basal que infla el estimador puntual. | Baja-Media | No | **Resuelta**: §6.8 A/B multi-semilla (500) → crudo insesgado, cobertura del IC 0,94. `balance_check.py` incluye ahora `merch_value` en la tabla formal (antes solo se imprimía por stdout). |
+| 5 | **Guardrails sin efecto inyectado** → "no degradación" trivialmente cierta; no demostraría por sí sola que los tests cazarían una regresión. | Media | No | **Resuelta**: §6.8 inyecta regresiones en G1 y verifica la regla de dos puertas. G4 (ítems/pedido) ya tiene umbral de magnitud cuantificado (antes `None`, bloqueaba solo por significancia). |
 | 6 | **Sin métrica de retención / LTV.** La recompra en Olist (~3 %) y la ventana lo impiden. | Baja | **Sí** | Declarada; queda fuera del alcance. |
+| 7 | **La potencia de rechazar H0 no es la potencia de la regla de decisión completa.** Antes solo se reportaba la primera (≈100 %), dejando la impresión de un diseño "sobradamente potenciado" para la decisión de negocio. | Alta (afecta cómo se lee cualquier "LANZAR"/"ITERAR" de un solo *split*) | No | **Resuelta** (revisión de portfolio): `ab_multiseed` mide, sobre las 500 re-aleatorizaciones, la tasa real de LANZAR/ITERAR/NO LANZAR bajo el MDE declarado: **~50 % / ~50 % / ~0 %**. El *split* SEED 42 no es representativo de la mitad de los casos. |
 
 **Limitaciones adicionales:**
 

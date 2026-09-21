@@ -18,13 +18,20 @@ target_power: 0.80
 
 # --- Two-gate rule for guardrails (docs/01 §1.4; corrected after global audit §D19) ---
 # A guardrail blocks the launch only if it is significant after BH AND its magnitude exceeds the
-# business threshold (see modeling.py::run_ab_test). G4 has no declared magnitude threshold in the
-# original design ("relevant magnitude" left unquantified) -> it is kept with the significance
-# criterion only, explicitly declared as a known limitation.
+# business threshold (see modeling.py::run_ab_test).
+# g4_n_items_relative_drop_pct (portfolio review, closes §D19/priority 4): G4 used to have no
+# quantified magnitude threshold ("relevant magnitude" with no number) and blocked on significance
+# alone -- with n~47k/group that means a drop of 0.002 items/order would be enough to block the
+# launch, exactly the problem the two-gate rule exists to prevent (see
+# guardrail_regression_scenarios). Threshold chosen on the same footing as g3 (relative fraction
+# of the control value, not an absolute R$/item): a 5% drop in the mean items per order
+# (control≈1.14 -> ~0.057 items) is the minimum magnitude a product owner would recognize as a
+# signal that the redesign pushes people to buy fewer items, not sampling noise.
 guardrail_thresholds:
   g1_review_score_pts: 0.05
   g2_cancelacion_pp: 0.2
   g3_freight_share_of_aov_rise_pct: 20.0
+  g4_n_items_relative_drop_pct: 5.0
 
 # --- Data preparation (Phase 3) ---
 window_start: "2017-01-01"

@@ -38,6 +38,19 @@ def breakeven_lift(volume: float,
     return total_cost / total_margin_per_lift
 
 
+def required_volume_for_mde(mde_pct: float,
+                            build=BUILD_COST, maint=MAINT_COST_YEAR, years=PAYBACK_YEARS) -> float:
+    """Inversa de `breakeven_lift`: volumen mínimo (pedidos/año) al que un lift de `mde_pct`
+    (en %, ej. 3.0) es exactamente break-even. Usado por evaluation.py (revisión de portfolio,
+    prioridad 2) para comparar el volumen REAL usado en la extrapolación del impacto contra el
+    volumen que el propio MDE declarado exige -- antes esa comparación solo existía como número
+    impreso por este script (`main()`), nunca como valor reutilizable ni contrastado contra la
+    decisión de negocio final."""
+    total_cost = build + maint * years
+    mde_frac = mde_pct / 100
+    return total_cost / (AOV_BASE * COMMISSION * NET_MARGIN_ON_COMMISSION * years * mde_frac)
+
+
 def main():
     rows = []
     for v in VOLUME_GRID:

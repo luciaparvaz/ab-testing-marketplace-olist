@@ -19,7 +19,13 @@ import matplotlib.pyplot as plt
 from config import ANALYTICAL_TABLE, OUT_FIGURES as FIG, OUT_TABLES as OUT_T
 
 CAT_COVARS = ["customer_state", "cat_dominante", "payment_type", "mes_compra"]
-NUM_COVARS = ["n_items", "freight_value"]
+# merch_value (portfolio review, closes §D6/priority 4): the PRIMARY metric was not in the formal
+# balance table -- it was only printed to stdout as an "ad hoc A/A check" at the end of this
+# script, never entering fase3_balance.csv or the |SMD|<0.10 criterion. It's precisely this
+# variable's baseline imbalance (~+1.2pp in the SEED=42 split) that explains most of why Phase 4's
+# observed lift (+5.7%) exceeds the true injected effect (+5%) -- it should have been in the
+# balance table from the start, not just a separate print.
+NUM_COVARS = ["n_items", "freight_value", "merch_value"]
 
 
 def smd_continuous(a: pd.Series, b: pd.Series) -> float:

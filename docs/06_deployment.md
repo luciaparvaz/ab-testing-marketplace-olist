@@ -21,9 +21,11 @@ Refactorizada tras la revisión del usuario ("no es reproducible si está todo e
   otro módulo define `SEED`, `ALPHA`, la ventana temporal, el modelo de costes, etc. (`tests/
   test_config.py` lo verifica con un análisis del AST).
 - **Único entrypoint:** `python run_all.py` corre las 6 fases en orden de dependencia, comprueba que
-  cada una genera sus salidas y termina con un **informe de reproducibilidad** (decisión == LANZAR,
-  A/A ~5 %, IC del A/B sobre el MDE, sin SRM, guardrails intactos, …). Sale con código ≠ 0 si algo
-  no cuadra. ~2 min.
+  cada una genera sus salidas y termina con un **informe de reproducibilidad** (la decisión es una
+  de LANZAR/ITERAR/NO LANZAR con justificación y es consistente con el break-even al volumen real
+  — antes el check era literalmente `decisión == LANZAR`, un criterio de aceptación fijado sobre el
+  resultado y no falsable, ver `tests/test_outputs.py`; A/A ~5 %, IC del A/B sobre el MDE, sin SRM,
+  guardrails intactos, …). Sale con código ≠ 0 si algo no cuadra. ~1-2 min.
 - **Sin rutas de ejecución paralelas:** el notebook `ab_test_olist.ipynb` **solo lee** `outputs/` y
   muestra figuras + narrativa; no recalcula nada. Antes tenía una segunda ruta de cálculo (llamaba a
   `modeling.main()` etc.), que era la crítica válida.

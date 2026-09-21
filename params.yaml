@@ -18,13 +18,20 @@ target_power: 0.80
 
 # --- Regla de dos puertas para guardrails (docs/01 §1.4; corregida tras auditoría global §D19) ---
 # Un guardrail bloquea el lanzamiento solo si es significativo tras BH Y su magnitud supera el
-# umbral de negocio (ver modeling.py::run_ab_test). G4 no tiene umbral de magnitud declarado en el
-# diseño original ("magnitud relevante" sin cuantificar) -> se deja solo con el criterio de
-# significancia, declarado explícitamente como limitación conocida.
+# umbral de negocio (ver modeling.py::run_ab_test).
+# g4_n_items_relative_drop_pct (revisión de portfolio, cierra §D19/prioridad 4): antes G4 no tenía
+# umbral de magnitud cuantificado ("magnitud relevante" sin número) y bloqueaba solo por
+# significancia -- con n≈47k/grupo eso significa que una caída de 0,002 ítems/pedido bastaría para
+# bloquear el lanzamiento, exactamente el problema que la regla de dos puertas existe para evitar
+# (ver guardrail_regression_scenarios). Umbral elegido en la misma línea que g3 (fracción relativa
+# del valor de control, no un R$/ítem absoluto): una caída del 5% en el nº medio de ítems por
+# pedido (control≈1,14 -> ~0,057 ítems) es la magnitud mínima que un responsable de producto
+# reconocería como señal de que el rediseño empuja a comprar menos artículos, no ruido de muestreo.
 guardrail_thresholds:
   g1_review_score_pts: 0.05
   g2_cancelacion_pp: 0.2
   g3_freight_share_of_aov_rise_pct: 20.0
+  g4_n_items_relative_drop_pct: 5.0
 
 # --- Preparación de datos (Fase 3) ---
 window_start: "2017-01-01"

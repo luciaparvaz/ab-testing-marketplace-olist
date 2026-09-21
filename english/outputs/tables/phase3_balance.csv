@@ -1,6 +1,7 @@
 covariate,type,control,treatment,SMD,test,stat,p_value,balanced
 n_items,continuous,1.14,1.1381,-0.0036,Welch-t,-0.555,0.579,True
 freight_value,continuous,22.7423,22.8869,0.0067,Welch-t,1.027,0.3046,True
+merch_value,continuous,137.0375,138.6666,0.0077,Welch-t,1.188,0.2349,True
 customer_state,categorical (27 levels),-,-,0.0127,chi2 (dof=26),16.68,0.9185,True
 cat_dominante,categorical (72 levels),-,-,0.02,chi2 (dof=71),76.01,0.3203,True
 payment_type,categorical (4 levels),-,-,0.0085,chi2 (dof=3),1.76,0.6227,True

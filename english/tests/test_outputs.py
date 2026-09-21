@@ -125,6 +125,19 @@ def test_guardrail_thresholds_configured():
     assert GUARDRAIL_THRESHOLDS["g1_review_score_pts"] == 0.05
     assert GUARDRAIL_THRESHOLDS["g2_cancelacion_pp"] == 0.2
     assert GUARDRAIL_THRESHOLDS["g3_freight_share_of_aov_rise_pct"] == 20.0
+    # previously absent (G4 used to block on significance alone, no magnitude threshold --
+    # portfolio review, priority 4): now quantified as a relative drop in control n_items.
+    assert GUARDRAIL_THRESHOLDS["g4_n_items_relative_drop_pct"] == 5.0
+
+
+def test_g4_magnitude_threshold_is_quantified(f4):
+    """G4 no longer blocks on significance alone (mag=None) -- it must now carry a real
+    threshold computed from GUARDRAIL_THRESHOLDS['g4_n_items_relative_drop_pct']
+    (portfolio review, priority 4)."""
+    g4 = f4["4_ab_test"]["guardrails"]["G4_n_items"]
+    assert g4["magnitude_exceeds_threshold"] is not None
+    assert isinstance(g4["magnitude_exceeds_threshold"], bool)
+    assert g4["magnitude_threshold_items"] > 0
 
 
 def test_guardrail_regression_two_gate_rule(f4):
@@ -159,5 +172,29 @@ def test_p_hacking_log_scale_is_clean(f5):
     assert log["after_Bonferroni"] == 0
 
 
-def test_decision_is_lanzar(f5):
-    assert f5["6_decision"]["decision"] == "LAUNCH"
+def test_decision_is_valid_and_justified(f5):
+    """Before: `decision == "LAUNCH"` hardcoded -- an acceptance criterion fixed on the result,
+    not on the structure (audit §5.4). Now verifies the decision is one of the rule's three valid
+    branches (§1.5) and comes with its justification and the MDE-vs-volume comparison that
+    conditions it (portfolio review, priority 2) -- not that it has to be "LAUNCH" specifically."""
+    dec = f5["6_decision"]
+    assert dec["decision"] in {"LAUNCH", "ITERATE", "DO NOT LAUNCH"}
+    assert len(dec["justification"]) > 0
+    assert "MDE_vs_volume_consistency" in f5["2_business_impact"]
+
+
+def test_decision_consistent_with_real_volume_breakeven(f5):
+    """The headline decision must be self-consistent with the project's own cost model at the
+    REAL volume used for the R$ impact -- not with an MDE calibrated for a ~7x larger marketplace
+    scale (portfolio review, priority 2: before, 'LAUNCH' and the real ~+21% break-even coexisted
+    without being reconciled)."""
+    prim = f5["1_primary_result"]
+    ci_lo = prim["CI95_lift_pct"][0]
+    mde_real = f5["2_business_impact"]["MDE_vs_volume_consistency"][
+        "MDE_break_even_AT_REAL_dataset_volume_pct"]
+    if not prim["significant"] or prim["lift_pct"] <= 0:
+        assert f5["6_decision"]["decision"] == "DO NOT LAUNCH"
+    elif ci_lo > mde_real:
+        assert f5["6_decision"]["decision"] == "LAUNCH"
+    else:
+        assert f5["6_decision"]["decision"] == "ITERATE"

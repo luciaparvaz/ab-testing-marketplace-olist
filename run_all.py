@@ -55,7 +55,14 @@ def reproducibility_report() -> bool:
     ms = f4["8_ab_multiseed"]["crudo"]
 
     checks = [
-        ("decisión == LANZAR", f5["6_decision"]["decision"] == "LANZAR"),
+        # Antes: `decision == "LANZAR"` -- un criterio de aceptación fijado sobre el RESULTADO en
+        # vez de sobre la estructura del pipeline (auditoría §5.4: "el pipeline falla si el
+        # análisis cambia de conclusión, el resultado deja de ser falsable"). Se sustituye por un
+        # invariante estructural: la decisión debe ser una de las tres ramas válidas de la regla
+        # §1.5 y venir acompañada de su justificación -- no que tenga que ser una en concreto.
+        ("decisión es una de LANZAR/ITERAR/NO LANZAR, con justificación",
+         f5["6_decision"]["decision"] in {"LANZAR", "ITERAR", "NO LANZAR"}
+         and len(f5["6_decision"]["justificacion"]) > 0),
         ("A/A: falsos positivos en [0.035, 0.065]", 0.035 <= aa <= 0.065),
         ("A/B primario: significativo", prim["significativo"]),
         ("A/B primario: IC 95 % por encima del MDE", prim["relevante"]),

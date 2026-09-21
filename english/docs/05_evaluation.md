@@ -137,22 +137,42 @@ quartiles, quarters). Test: `treat × cut` interaction, **HC3** Wald. Expected b
 
 ## 5.6 Product decision
 
-# 🟢 LAUNCH
+# 🟡 ITERATE
+
+*(Portfolio review: this section originally said "🟢 LAUNCH" — see below for why it changed and
+what code was fixed.)*
 
 | Criterion | ✔ |
 |---|---|
 | Significant primary effect (p ≈ 3·10⁻¹¹) | ✅ |
-| 95% CI of the lift entirely above the relevance MDE (+3%) | ✅ [+3.99%; +7.34%] |
+| 95% CI of the lift entirely above the **declared** relevance MDE (+3%) | ✅ [+3.99%; +7.34%] |
+| 95% CI of the lift entirely above the *break-even* **at the real volume** (+21.2%) | ❌ — the observed lift (+5.7%) falls well short |
 | Robust estimate (winsor, log, bootstrap, ANCOVA all agree) | ✅ |
 | No guardrail degraded (G1-G4, Benjamini-Hochberg) | ✅ |
 | Homogeneous relative effect across pre-specified segments | ✅ |
-| Material economic impact (+R$ 456k/year GMV) | ✅ |
+| Economic impact (+R$ 456k/year GMV) vs. redesign cost (~R$ 410k/2yr) | ⚠️ insufficient at the real volume |
+
+**Why the decision changed (portfolio correction, not new data):** the +3% MDE is only the correct
+*break-even* for a marketplace with ≥ ~415,000 orders/year
+([`src/mde_cost_model.py`](../src/mde_cost_model.py)). The R$ impact above is computed on this
+dataset's **real** volume (~58.7k orders/year, ~7x smaller), at which the same cost model requires
+a break-even of **+21.2%** — well above both the true effect (+5%) and the observed one (+5.7%).
+The earlier version of this section applied the "CI > +3%" criterion and concluded LAUNCH without
+cross-checking it against the volume that +3% is actually valid for; `evaluation.py` now computes
+that comparison explicitly (`2_business_impact.MDE_vs_volume_consistency` in
+[`outputs/tables/phase5_summary.json`](../outputs/tables/phase5_summary.json)) and the headline
+decision uses the real break-even, not the unadjusted declared one.
 
 **Declared caveats:**
 - The effect is **synthetic and known**: this decision **validates the decision process**, it does
   not constitute a real finding about Olist.
-- With an injected ATE of +2% or +3%, the same rule would have returned **ITERATE** (real effect
-  but CI touching the MDE); with +0%, **DO NOT LAUNCH** (Phase 4 §4.5). All three branches work.
+- With an injected ATE of +2% or +3% evaluated under the **declared** MDE (not the volume-adjusted
+  one), the same rule would have returned **ITERATE** (real effect but CI touching the MDE); with
+  +0%, **DO NOT LAUNCH** (Phase 4 §4.5) — that section's table uses the declared MDE on purpose to
+  demonstrate this; don't confuse it with this section's headline decision.
+- The **power of the decision rule itself** (not just of rejecting H0) is measured in Phase 4
+  §6.8/`ab_multiseed`: under the declared MDE, the "LAUNCH" gate only fires in ~50% of the
+  re-randomizations. The SEED=42 split isn't representative of the other half of cases.
 
 ---
 
@@ -180,6 +200,7 @@ quartiles, quarters). Test: `treat × cut` interaction, **HC3** Wald. Expected b
 - [x] ANCOVA: −11.2% SE, estimator closer to the real value.
 - [x] Pre-specified segments + BH: **no heterogeneity**.
 - [x] p-hacking demonstrated (level vs. log; BH vs. Bonferroni).
-- [x] **Decision: LAUNCH**, with all three branches of the rule verified.
+- [x] **Decision: ITERATE** (the effect is real but doesn't clear the break-even at the dataset's
+  real volume), with all three branches of the rule verified and the rule's own power measured.
 - **Next (Phase 6 — Deployment):** 1-page executive summary, reproducible notebook with a
   narrative, GitHub README, LinkedIn post draft.

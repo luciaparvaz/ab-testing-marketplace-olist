@@ -4,9 +4,9 @@ The project's single reproducible entrypoint.
     python run_all.py
 
 Runs the CRISP-DM phases in dependency order, verifies that each one generates its outputs
-and finishes with a REPRODUCIBILITY REPORT: checks key invariants (decision == LAUNCH,
-A/A false-positive rate ~5%, no SRM, guardrails intact, ...) and exits with code != 0
-if any of them fails.
+and finishes with a REPRODUCIBILITY REPORT: checks key invariants (the decision is one of
+LAUNCH/ITERATE/DO NOT LAUNCH with a justification, A/A false-positive rate ~5%, no SRM,
+guardrails intact, ...) and exits with code != 0 if any of them fails.
 
 All parameters live in params.yaml. All seeds are fixed -> deterministic result.
 """
@@ -55,7 +55,14 @@ def reproducibility_report() -> bool:
     ms = f4["8_ab_multiseed"]["raw"]
 
     checks = [
-        ("decision == LAUNCH", f5["6_decision"]["decision"] == "LAUNCH"),
+        # Before: `decision == "LAUNCH"` -- an acceptance criterion fixed on the RESULT instead of
+        # on the pipeline's structure (audit §5.4: "the pipeline fails if the analysis changes its
+        # conclusion, the result stops being falsifiable"). Replaced with a structural invariant:
+        # the decision must be one of the rule's three valid branches (§1.5) and come with its
+        # justification -- not that it has to be one specific value.
+        ("decision is one of LAUNCH/ITERATE/DO NOT LAUNCH, with justification",
+         f5["6_decision"]["decision"] in {"LAUNCH", "ITERATE", "DO NOT LAUNCH"}
+         and len(f5["6_decision"]["justification"]) > 0),
         ("A/A: false positives in [0.035, 0.065]", 0.035 <= aa <= 0.065),
         ("A/B primary: significant", prim["significant"]),
         ("A/B primary: 95% CI above the MDE", prim["relevant"]),

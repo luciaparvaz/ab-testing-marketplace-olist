@@ -231,8 +231,9 @@
         "alarm_threshold": "significant drop",
         "p_adjusted_BH": 0.772,
         "significant_after_BH": false,
-        "magnitude_exceeds_threshold": null,
-        "threshold_note": "no quantified magnitude threshold in the design (§1.4: 'relevant magnitude') -> blocks on significance alone, declared as a known limitation",
+        "magnitude_threshold_items": 0.057,
+        "magnitude_exceeds_threshold": false,
+        "threshold_note": "quantified threshold (portfolio review, previously absent): drop >= 5% of control n_items (-0.0570 items/order) -> no longer blocks on significance alone",
         "blocks": false
       }
     },
@@ -377,7 +378,12 @@
         7.07
       ],
       "CI95_coverage_of_+5pct": 0.942,
-      "empirical_power": 0.998
+      "empirical_power_reject_H0": 0.998,
+      "decision_rate": {
+        "LAUNCH": 0.494,
+        "ITERATE": 0.504,
+        "DO NOT LAUNCH": 0.002
+      }
     },
     "winsor_p99.5": {
       "mean_lift_pct": 4.64,
@@ -388,18 +394,24 @@
         6.21
       ],
       "CI95_coverage_of_+5pct": 0.92,
-      "empirical_power": 1.0
+      "empirical_power_reject_H0": 1.0,
+      "decision_rate": {
+        "LAUNCH": 0.504,
+        "ITERATE": 0.496,
+        "DO NOT LAUNCH": 0.0
+      }
     },
-    "finding": "On RAW the estimator is UNBIASED (bias -0.031 pp) and the 95% CI covers the true value 94% of the time (nominal 95%). WINSORIZATION introduces a small NEGATIVE bias (-0.36 pp) because it clips the treatment's high values more (multiplicative effect) -> coverage drops to 92%. That is the price of the variance reduction; the (LAUNCH) decision is robust because both CIs clear +3%. The +5.7% of the SEED=42 split falls within the p2.5-p97.5 range."
+    "finding": "On RAW the estimator is UNBIASED (bias -0.031 pp) and the 95% CI covers the true value 94% of the time (nominal 95%). WINSORIZATION introduces a small NEGATIVE bias (-0.36 pp) because it clips the treatment's high values more (multiplicative effect) -> coverage drops to 92%. That is the price of the variance reduction. The +5.7% of the SEED=42 split falls within the p2.5-p97.5 range.",
+    "decision_rule_power_finding": "The power to REJECT H0 (100%) is NOT the power of the full decision rule. With the winsorized cap, the gate '95% CI entirely > +3%' -> LAUNCH fires in 50% of the 500 re-randomizations (ITERATE 50%, DO NOT LAUNCH 0%). The SEED=42 split (which did give LAUNCH) benefited from a favorable baseline imbalance -- it is not representative of the other half of re-randomizations. 'The design is amply powered' is true for H0, not for the business decision actually made."
   },
   "9_clustered_se": {
     "n_orders_no_dedup": 97905,
     "n_customers": 94703,
-    "lift_pct_all_orders": 5.713,
+    "lift_pct_all_orders": 5.686,
     "lift_pct_dedup_1_order_per_customer_ref": 5.666,
-    "SE_robust_no_clustering_R$": 1.1235,
-    "SE_cluster_by_customer_R$": 1.136,
-    "SE_inflation_from_clustering_pct": 1.11,
+    "SE_robust_no_clustering_R$": 1.1142,
+    "SE_cluster_by_customer_R$": 1.1267,
+    "SE_inflation_from_clustering_pct": 1.12,
     "finding": "with ALL orders + SE clustered by customer, the SE is practically identical to that of the deduplicated version (97% of customers have 1 order -> clustering barely inflates the SE, ~1%). The point lift differs slightly because it includes ~3,200 extra orders from repeat customers, but the conclusion (significant, CI above the MDE) does not change. Deduplicating was the simple and correct option."
   }
 }

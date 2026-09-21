@@ -45,9 +45,12 @@ without bias, separates statistical significance from business relevance, and wi
 
 **Main result.** The A/B test estimates an AOV increase of **+5.7%** (winsorized primary metric;
 95% CI [+4.0%; +7.3%]; p ≈ 3·10⁻¹¹) or **+6.1%** on the unwinsorized metric (95% CI [+4.1%;
-+8.1%]). Both intervals contain the true injected effect (+5%) and lie **entirely above** the
-business relevance threshold (+3%). No guardrail is degraded and the effect is homogeneous across
-segments. The decision rule returns **LAUNCH**.
++8.1%]). Both intervals contain the true injected effect (+5%) and lie entirely above the
+**declared** MDE (+3%) — but that +3% is only the correct *break-even* for a marketplace with
+≥ ~415,000 orders/year, and this project's economic impact is computed on this dataset's **real**
+volume (~58.7k orders/year), at which the real break-even is **+21.2%** (§10, limitation #3). No
+guardrail is degraded and the effect is homogeneous across segments, but with the threshold correct
+for this volume, the decision rule returns **ITERATE**, not LAUNCH.
 
 **Methodological findings** (byproducts of the exercise, not of Olist):
 
@@ -117,8 +120,10 @@ in every deliverable.
   `effect_model.py` (the synthetic effect, shared).
 - **`run_all.py`** — single *entrypoint*: runs the six phases in order, verifies that each one
   generates its outputs, and finishes with a **reproducibility report** that checks 10 invariants
-  (decision == LAUNCH, A/A false-positive rate in [3.5%; 6.5%], A/B CI above the MDE, no SRM,
-  guardrails intact...). Exits with code ≠ 0 if something fails. ~2 min.
+  (the decision is one of LAUNCH/ITERATE/DO NOT LAUNCH, justified and consistent with the
+  real-volume break-even — previously the check was `decision == LAUNCH`, a non-falsifiable
+  acceptance criterion fixed on the outcome; A/A false-positive rate in [3.5%; 6.5%], A/B CI above
+  the MDE, no SRM, guardrails intact...). Exits with code ≠ 0 if something fails. ~1-2 min.
 - **`notebooks/ab_test_olist.ipynb`** — **presentation** layer: only reads `outputs/` and shows
   figures and narrative; it computes nothing.
 - **`tests/`** — `pytest` (fast) + `pytest -m slow` (re-runs and checks bit-for-bit idempotency).
@@ -233,8 +238,11 @@ rises**:
 | 1,000,000 | +1.25% |
 | 5,000,000 | +0.25% |
 
-Conclusion: the **+3% is valid for a marketplace with ≥ ~415,000 orders/year**. The project
-assumes that scale (medium-large marketplace). Figure: `outputs/figures/f_mde_breakeven.png`.
+Conclusion: the **+3% is valid for a marketplace with ≥ ~415,000 orders/year**. This dataset's real
+volume (~58.7k orders/year) is **~7x smaller** than that — an earlier version of this report
+assumed, without checking, that the project operated at the scale +3% requires; it does not, and
+§7.6 / §9.7 use the correct break-even for the real volume (+21.2%) in the headline decision, not
+the +3%. Figure: `outputs/figures/f_mde_breakeven.png`.
 
 ### 3.8 Decision D6 — Product decision rule
 
@@ -554,7 +562,10 @@ primary metric. The guardrail tests' real ability to **catch** a regression is v
 ### 6.7 Decision sweep — the three branches of the rule
 
 Applying the LAUNCH / ITERATE / DO NOT LAUNCH rule to different injected effect sizes (winsorized
-primary metric; guardrails OK; this *split* has +1.2% of baseline imbalance):
+primary metric; guardrails OK; this *split* has +1.2% of baseline imbalance). As in §4.5, this
+table intentionally uses the **declared** MDE (+3%) to show the rule reaches all three branches —
+the project's headline decision (§7.6/§9.7) instead uses the break-even at the **real volume** of
+the dataset (+21.2%), so the "5% (declared)" row gives ITERATE there, not LAUNCH:
 
 | Injected ATE | observed lift | 95% CI | p-value | **Decision** |
 |---:|---:|---:|---:|:--:|
@@ -701,23 +712,34 @@ quartiles, quarters). Test: `treat × cut` interaction, HC3 Wald. Expected by pu
 
 ### 7.6 Product decision
 
-> # 🟢 LAUNCH
+> # 🟡 ITERATE
+>
+> *(Portfolio review: this section originally said "🟢 LAUNCH" — the criterion used the declared
+> MDE without checking what volume it is valid for. See the break-even caveat below and §10,
+> limitation #3.)*
 
 | Criterion | ✔ |
 |---|---|
 | Significant primary effect (p ≈ 3·10⁻¹¹) | ✅ |
-| 95% CI of the *lift* entirely above the MDE (+3%) | ✅ [+3.99%; +7.34%] |
+| 95% CI of the *lift* entirely above the **declared** MDE (+3%) | ✅ [+3.99%; +7.34%] |
+| 95% CI of the *lift* entirely above the *break-even* **at the real volume** (+21.2%) | ❌ |
 | Robust estimate (winsor, log, bootstrap, ANCOVA all agree) | ✅ |
 | No guardrail degraded (G1-G4, Benjamini-Hochberg) | ✅ |
 | Homogeneous relative effect across pre-specified segments | ✅ |
-| Material economic impact (+R$ 456k/year GMV) | ✅ |
+| Economic impact (+R$ 456k/year GMV) vs. redesign cost (~R$ 410k/2yr) | ⚠️ insufficient at the real volume |
 
 **Declared caveats:**
 
 - The effect is **synthetic and known**: this decision **validates the decision process**, it does
   not constitute a real finding about Olist.
-- With an injected ATE of +2% or +3%, the same rule would have returned **ITERATE**; with +0%,
-  **DO NOT LAUNCH**. All three branches work.
+- The +3% MDE is the correct break-even only for a marketplace with ≥ ~415,000 orders/year; the R$
+  impact above is computed on the dataset's real volume (~58.7k/year, ~7x smaller), at which the
+  real break-even is +21.2%. Mixing both scales — the error in the earlier version of this section
+  — is what this review corrects.
+- With an injected ATE of +2% or +3% evaluated under the **declared** MDE, the same rule would have
+  returned **ITERATE**; with +0%, **DO NOT LAUNCH**. All three branches work (§4.5 uses the
+  declared MDE on purpose to demonstrate this; don't confuse it with this section's headline
+  decision).
 
 **What to watch after a real launch:** the AOV at 4 weeks against the +3% minimum; the return and
 complaint rate (not measurable in Olist); review again at 90 days to rule out the effect diluting
@@ -869,16 +891,22 @@ two nominal findings were observed, none of which survived the multiplicity corr
 
 ### 9.7 Translation into a product decision
 
-The primary effect is **statistically significant** (p ≈ 3·10⁻¹¹) and, above all, **materially
-relevant**: the 95% confidence interval of the AOV increase lies entirely above the business
-relevance threshold (+3%), derived from the break-even model. The estimate is robust to the
-specification (winsorization, log scale, bootstrap, and covariate adjustment produce consistent
-conclusions), no control metric degrades, and the effect is homogeneous across the pre-specified
-segments. The estimated economic impact, under linear extrapolation to the historical annual
-volume, amounts to **+R$ 456,000 per year of merchandise value** (95% CI [+R$ 322,000; +R$
-591,000]). As a result, the decision rule returns **LAUNCH**. A sweep of the rule over different
-effect sizes confirms that all three possible decisions (DO NOT LAUNCH, ITERATE, LAUNCH) are
-reachable, and that an effect of +2% or +3% would have led to "ITERATE".
+The primary effect is **statistically significant** (p ≈ 3·10⁻¹¹) and its 95% confidence interval
+lies entirely above the **declared** business relevance threshold (+3%), derived from the
+break-even model. But that +3% is only the correct break-even for a marketplace with ≥ ~415,000
+orders/year, and the economic impact below is computed on the dataset's **real** volume (~58.7k
+orders/year, ~7x smaller) — at which the same model requires a break-even of **+21.2%**. The
+estimate is robust to the specification (winsorization, log scale, bootstrap, and covariate
+adjustment produce consistent conclusions), no control metric degrades, and the effect is
+homogeneous across the pre-specified segments. The estimated economic impact, under linear
+extrapolation to the historical annual volume, amounts to **+R$ 456,000 per year of merchandise
+value** (95% CI [+R$ 322,000; +R$ 591,000]) — against a redesign cost of ~R$ 410,000 over two
+years, not clearly covered at this volume. Applying the relevance threshold that matches the real
+volume (not the unadjusted declared one), the decision rule returns **ITERATE**, not LAUNCH. A
+sweep of the rule over different effect sizes (§4.5, under the declared MDE, to isolate the rule's
+behavior from the volume adjustment) confirms that all three possible decisions (DO NOT LAUNCH,
+ITERATE, LAUNCH) are reachable, and that an effect of +2% or +3% would have led to "ITERATE" even
+under that unadjusted MDE.
 
 ---
 
@@ -891,10 +919,11 @@ Consolidated synthesis of the project's three audits (`docs/audit_phase1_phase2.
 |---|---|---|---|---|
 | 1 | **The experiment is simulated** → zero external validity. The project describes nothing real about Olist. | High (it is the premise) | **Yes** | Declared in every deliverable; the project validates the *process*. |
 | 2 | **The effect model shapes results.** Two choices matter: (a) responders are drawn at random → the homogeneity across segments is partly "baked into" the design; (b) the effect is multiplicative → it generates the artifact the p-hacking demo exploits. A model of the free-shipping bar would concentrate the effect below a threshold (a real heterogeneous effect). | Medium | Partial | Consequences explicitly analyzed; §6.8 adds a heterogeneous variant and shows the design detects it. |
-| 3 | **Relevance MDE = +3%.** | Medium | No | **Resolved**: `src/mde_cost_model.py` derives it from a *break-even*; valid for volume ≥ ~415,000 orders/year. |
-| 4 | **A single analysis split** (SEED 42), with +1.2% of baseline imbalance that inflates the point estimator. | Low-Medium | No | **Resolved**: §6.8 multi-seed A/B (500) → raw unbiased, CI coverage 0.94. |
-| 5 | **Guardrails with no injected effect** → "no degradation" trivially true; would not by itself demonstrate that the tests would catch a real regression. | Medium | No | **Resolved**: §6.8 injects regressions into G1 and verifies the two-gate rule. |
+| 3 | **Relevance MDE = +3%, but only valid from ~415,000 orders/year.** Phase 5's R$ impact is extrapolated over the dataset's real volume (~58.7k orders/year), ~7x smaller — at that scale the real break-even is +21.2%, not +3%. Publishing "LAUNCH" while mixing both scales was an unresolved internal contradiction. | High (affects the headline decision) | No | **Resolved** (portfolio review): `evaluation.py` explicitly compares the volume used in the extrapolation against the minimum volume the declared MDE requires (`2_business_impact.MDE_vs_volume_consistency`) and uses the break-even **at the real volume** to decide. The decision changed from LAUNCH to **ITERATE**. |
+| 4 | **A single analysis split** (SEED 42), with +1.2% of baseline imbalance that inflates the point estimator. | Low-Medium | No | **Resolved**: §6.8 multi-seed A/B (500) → raw unbiased, CI coverage 0.94. `balance_check.py` now includes `merch_value` in the formal table (previously only printed to stdout). |
+| 5 | **Guardrails with no injected effect** → "no degradation" trivially true; would not by itself demonstrate that the tests would catch a real regression. | Medium | No | **Resolved**: §6.8 injects regressions into G1 and verifies the two-gate rule. G4 (items/order) now has a quantified magnitude threshold (previously `None`, blocked on significance alone). |
 | 6 | **No retention / LTV metric.** Olist's repeat purchase (~3%) and the window prevent it. | Low | **Yes** | Declared; out of scope. |
+| 7 | **The power to reject H0 is not the power of the full decision rule.** Previously only the former was reported (≈100%), leaving the impression of a design "amply powered" for the business decision. | High (affects how any single-split LAUNCH/ITERATE reads) | No | **Resolved** (portfolio review): `ab_multiseed` measures, over the 500 re-randomizations, the real rate of LAUNCH/ITERATE/DO NOT LAUNCH under the declared MDE: **~50% / ~50% / ~0%**. The SEED 42 split is not representative of the other half of cases. |
 
 **Additional limitations:**
 

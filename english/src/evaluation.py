@@ -25,8 +25,10 @@ from statsmodels.stats.multitest import multipletests
 import matplotlib.pyplot as plt
 
 from config import (ALPHA, ANALYTICAL_TABLE, ATE, MDE_RELEVANCIA, OUT_FIGURES as FIG,
-                    OUT_TABLES as OUT_T, RAW, SEED, WINDOW_END, WINDOW_START, apply_plot_style)
-from effect_model import inject_diluted_effect
+                    OUT_TABLES as OUT_T, RAW, SEED, WINDOW_END, WINDOW_START, WINSOR_Q,
+                    apply_plot_style)
+from effect_model import compute_winsor_cap, inject_diluted_effect, winsorize_outcome
+import mde_cost_model
 
 
 def _design(df: pd.DataFrame, cols: list[str], cat_cols: list[str]) -> pd.DataFrame:
@@ -84,8 +86,9 @@ def load_with_effect() -> pd.DataFrame:
     is_t = (df.group == "treatment").values
     rng = np.random.default_rng(SEED)
     df["mv"] = inject_diluted_effect(df["merch_value"].values, is_t, rng)
-    cap = df["merch_value_w"].max()
-    df["mv_w"] = np.minimum(df["mv"], cap)
+    # same cap, same function, across the whole pipeline (see src/modeling.py and effect_model.py).
+    cap = compute_winsor_cap(df["merch_value"].values, WINSOR_Q)
+    df["mv_w"] = winsorize_outcome(df["mv"].values, cap)
 
     # segments
     df["cesta"] = np.where(df["n_items"] >= 2, "2+ items", "1 item")
@@ -148,6 +151,18 @@ def main():
     }
     from config import COST_MODEL
     COMMISSION = COST_MODEL["commission"]  # assumed marketplace take rate
+
+    # --- MDE <-> volume consistency (portfolio review, priority 2) -----------------------------
+    # mde_cost_model.py ALREADY computed (only via stdout, never as an output or checked against
+    # the decision) that the +3% MDE is only break-even from ~415k orders/year, while the business
+    # impact below is extrapolated over the REAL volume of the dataset (~59k). At that real
+    # volume, the project's own cost model requires a MUCH higher break-even than +3% -- computed
+    # here explicitly, not just stated in prose, and used to condition the final decision instead
+    # of ignoring it.
+    mde_breakeven_at_real_volume_pct = mde_cost_model.breakeven_lift(n_orders_year) * 100
+    min_volume_for_mde_3pct = mde_cost_model.required_volume_for_mde(MDE_RELEVANCIA)
+    real_volume_is_consistent_with_declared_mde = n_orders_year >= min_volume_for_mde_3pct
+
     out["2_business_impact"] = {
         "valid_orders_window_no_dedup": n_orders_window, "window_months": n_months,
         "estimated_orders_per_year": round(n_orders_year),
@@ -160,6 +175,24 @@ def main():
         "note": ("GMV = merchandise value. The marketplace's revenue is a commission (take rate) "
                  "on the GMV; 15% is assumed for illustrative purposes. Linear extrapolation of the "
                  "per-order lift to the historical annual volume."),
+        "MDE_vs_volume_consistency": {
+            "declared_MDE_pct": MDE_RELEVANCIA,
+            "volume_used_in_extrapolation_orders_year": round(n_orders_year),
+            "min_volume_for_+3pct_MDE_to_break_even": round(min_volume_for_mde_3pct),
+            "MDE_break_even_AT_REAL_dataset_volume_pct": round(mde_breakeven_at_real_volume_pct, 2),
+            "real_volume_is_consistent_with_declared_MDE": bool(real_volume_is_consistent_with_declared_mde),
+            "reading": (
+                f"The +{MDE_RELEVANCIA}% MDE used as the relevance gate (§1.5) is only break-even "
+                f"from ~{min_volume_for_mde_3pct:,.0f} orders/year. The impact above is extrapolated "
+                f"over ~{n_orders_year:,.0f} orders/year (this dataset's REAL volume) -- at that "
+                f"scale, the project's own cost model requires a break-even of "
+                f"~+{mde_breakeven_at_real_volume_pct:.1f}%, not +{MDE_RELEVANCIA}%. The +3% MDE "
+                "only makes sense as a decision threshold if you implicitly assume a marketplace "
+                "~7x larger than Olist in this dataset; at the real scale, neither the true "
+                "injected lift (+5%) nor the one observed in the SEED=42 split (~+5.7%) clears the "
+                "real break-even. See '6_decision' for how this conditions the final recommendation."
+            ),
+        },
     }
 
     # ---- 3. ANCOVA: covariate adjustment (variance reduction) ------
@@ -293,24 +326,59 @@ def main():
     plt.close(fig)
 
     # ---- 6. decision --------------------------------------------
-    dec = "LAUNCH" if out["1_primary_result"]["relevant"] else "REVIEW"
+    # Before: `dec` depended ONLY on whether the CI cleared the DECLARED MDE (+3%), a threshold
+    # that (see 2_business_impact.MDE_vs_volume_consistency) is only break-even from ~415k
+    # orders/year -- far above the ~59k real orders used to compute the R$ impact above.
+    # Publishing "LAUNCH" with an impact annualized over the real volume, while applying a
+    # relevance threshold that volume does not justify, is the contradiction this portfolio
+    # review closes. The decision now uses the SAME three-branch rule as
+    # decision_scenarios/ab_multiseed (see src/modeling.py), but with the REAL break-even of the
+    # dataset's volume as the threshold -- not the +3% meant for a ~7x larger scale.
+    mde_real = out["2_business_impact"]["MDE_vs_volume_consistency"][
+        "MDE_break_even_AT_REAL_dataset_volume_pct"]
+    if not out["1_primary_result"]["significant"] or prim["lift_pct"] <= 0:
+        dec = "DO NOT LAUNCH"
+    elif prim["ci_lo"] > mde_real:
+        dec = "LAUNCH"
+    else:
+        dec = "ITERATE"
+    # decision under the DECLARED MDE (+3%), the one this project reported before this
+    # correction -- kept for context, but no longer the headline decision.
+    dec_under_declared_mde = "LAUNCH" if out["1_primary_result"]["relevant"] else "REVIEW"
+
     out["6_decision"] = {
         "decision": dec,
+        "decision_under_declared_MDE_+3pct_ignoring_volume": dec_under_declared_mde,
         "justification": [
             f"Primary effect +{prim['lift_pct']:.2f}% (95% CI [{prim['ci_lo']:.2f}, {prim['ci_hi']:.2f}]), "
             f"log10(p) = {prim['log10_p']} -> highly significant.",
-            f"95% CI entirely above the relevance MDE (+{MDE_RELEVANCIA}%) -> relevant for the business.",
+            f"At the dataset's REAL volume (~{out['2_business_impact']['estimated_orders_per_year']:,} "
+            f"orders/year), the cost model's break-even is +{mde_real:.1f}% "
+            f"(not the declared +{MDE_RELEVANCIA}%, calibrated for a much larger marketplace) -> "
+            f"the 95% CI of the effect {'DOES' if prim['ci_lo'] > mde_real else 'does NOT'} clear "
+            f"that real threshold entirely.",
             "No guardrail degraded (Phase 4, Benjamini-Hochberg).",
             "Homogeneous effect across pre-specified segments (no interaction after BH).",
             f"Covariate-adjusted estimate (ANCOVA): +{out['3_ancova']['adjusted']['lift_pct']}% "
             f"with SE {out['3_ancova']['SE_reduction_pct']}% lower.",
             f"Estimated impact: +R$ {uplift_gmv_year:,.0f}/year of merchandise GMV "
-            f"(CI [{gmv_year*prim['ci_lo']/100:,.0f}, {gmv_year*prim['ci_hi']/100:,.0f}]).",
+            f"(CI [{gmv_year*prim['ci_lo']/100:,.0f}, {gmv_year*prim['ci_hi']/100:,.0f}]) -- "
+            f"insufficient to cover the redesign's cost (R$ "
+            f"{mde_cost_model.BUILD_COST + mde_cost_model.MAINT_COST_YEAR * mde_cost_model.PAYBACK_YEARS:,.0f} "
+            f"over {mde_cost_model.PAYBACK_YEARS} years) at the dataset's real volume.",
         ],
         "caveats": [
             "The effect is synthetic and declared: this 'decision' validates the process, not a real finding.",
-            "The point estimate (+5.7%) exceeds the injected ATE (+5%) because of the split's "
-            "baseline imbalance (+1.2%, not significant); the CI covers it.",
+            "The point estimate exceeds the injected ATE (+5%) because of the split's baseline "
+            "imbalance (see balance_check.py, now includes merch_value in the formal table); the "
+            "CI covers it.",
+            f"The power of this decision rule (not just of rejecting H0) is measured in "
+            f"fase4_resumen.json::8_ab_multiseed -- under the declared MDE, the 'LAUNCH' gate only "
+            f"fires in a fraction of re-randomizations, not always (see "
+            f"'decision_rule_power_finding').",
+            "The +3% MDE is not wrong in itself -- it is the correct threshold if the marketplace "
+            "had ~415k+ orders/year. The problem is publishing a business decision that mixes that "
+            "threshold with an R$ impact computed over a volume ~7x smaller.",
         ],
     }
 

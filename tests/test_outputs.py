@@ -125,6 +125,19 @@ def test_guardrail_thresholds_configured():
     assert GUARDRAIL_THRESHOLDS["g1_review_score_pts"] == 0.05
     assert GUARDRAIL_THRESHOLDS["g2_cancelacion_pp"] == 0.2
     assert GUARDRAIL_THRESHOLDS["g3_freight_share_of_aov_rise_pct"] == 20.0
+    # antes ausente (G4 bloqueaba solo por significancia, sin umbral de magnitud -- revisión de
+    # portfolio, prioridad 4): ahora cuantificado como caída relativa del n_items de control.
+    assert GUARDRAIL_THRESHOLDS["g4_n_items_relative_drop_pct"] == 5.0
+
+
+def test_g4_magnitude_threshold_is_quantified(f4):
+    """G4 ya no bloquea solo por significancia (mag=None) -- debe traer un umbral real calculado
+    a partir de GUARDRAIL_THRESHOLDS['g4_n_items_relative_drop_pct'] (revisión de portfolio,
+    prioridad 4)."""
+    g4 = f4["4_ab_test"]["guardrails"]["G4_n_items"]
+    assert g4["magnitud_supera_umbral"] is not None
+    assert isinstance(g4["magnitud_supera_umbral"], bool)
+    assert g4["umbral_magnitud_items"] > 0
 
 
 def test_guardrail_regression_two_gate_rule(f4):
@@ -159,5 +172,30 @@ def test_p_hacking_log_scale_is_clean(f5):
     assert log["tras_Bonferroni"] == 0
 
 
-def test_decision_is_lanzar(f5):
-    assert f5["6_decision"]["decision"] == "LANZAR"
+def test_decision_is_valid_and_justified(f5):
+    """Antes: `decision == "LANZAR"` hardcodeado -- un criterio de aceptación fijado sobre el
+    resultado, no sobre la estructura (auditoría §5.4). Ahora se verifica que la decisión es una de
+    las tres ramas válidas de la regla §1.5 y viene acompañada de su justificación y de la
+    comparación MDE-vs-volumen que la condiciona (revisión de portfolio, prioridad 2) -- no que
+    tenga que ser necesariamente "LANZAR"."""
+    dec = f5["6_decision"]
+    assert dec["decision"] in {"LANZAR", "ITERAR", "NO LANZAR"}
+    assert len(dec["justificacion"]) > 0
+    assert "consistencia_MDE_vs_volumen" in f5["2_impacto_negocio"]
+
+
+def test_decision_consistent_with_real_volume_breakeven(f5):
+    """La decisión titular debe ser autoconsistente con el propio modelo de costes del proyecto al
+    volumen REAL usado para el impacto en R$ -- no con un MDE calibrado para una escala de
+    marketplace ~7x mayor (revisión de portfolio, prioridad 2: antes 'LANZAR' y el break-even real
+    de ~+21% convivían sin conciliarse)."""
+    prim = f5["1_resultado_primario"]
+    ci_lo = prim["IC95_lift_pct"][0]
+    mde_real = f5["2_impacto_negocio"]["consistencia_MDE_vs_volumen"][
+        "MDE_break_even_AL_VOLUMEN_REAL_del_dataset_pct"]
+    if not prim["significativo"] or prim["lift_pct"] <= 0:
+        assert f5["6_decision"]["decision"] == "NO LANZAR"
+    elif ci_lo > mde_real:
+        assert f5["6_decision"]["decision"] == "LANZAR"
+    else:
+        assert f5["6_decision"]["decision"] == "ITERAR"

@@ -128,7 +128,11 @@ regression is verified in §4.7.
 ## 4.5 Decision sweep — the three branches of the §1.5 rule
 
 Applying the launch / iterate / do-not-launch rule to different injected effect sizes (winsorized
-primary metric, guardrails OK, `SEED = 42` split with +1.2% of baseline imbalance):
+primary metric, guardrails OK, `SEED = 42` split with +1.2% of baseline imbalance).
+**This table intentionally uses the declared MDE (+3%)** to show the rule reaches all three
+branches under a fixed threshold — it should not be read as the project's headline decision, which
+in Phase 5 uses the *break-even* at the real dataset volume (+21.2%, well above +3%) and therefore
+gives ITERATE in the "5% (declared)" row instead of LAUNCH (see §5.6 and `evaluation.py`):
 
 | Injected ATE | observed lift | 95% CI | p-value | **Decision** |
 |---:|---:|---:|---:|:--:|
@@ -168,7 +172,8 @@ over **500 seeds**, on raw and on winsorized data, to measure the estimator's di
    vs. 1.11), but the CI **slightly under-covers** (0.92).
 3. **Implication:** for the **significance test** (is there an effect? does it clear the MDE?),
    winsorization is preferable (more power, less MSE). For the **point estimate of the effect
-   size**, raw is unbiased. Both are reported; the (LAUNCH) decision is identical under both.
+   size**, raw is unbiased. Both are reported; under the declared MDE the decision is identical in
+   both (LAUNCH); at the real dataset-volume break-even, also identical (ITERATE, see §5.6).
 
 This **closes the "single split" weakness** (global audit #4): the estimator is reliable under
 repetition and the CIs are (almost) well calibrated.

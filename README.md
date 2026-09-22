@@ -10,6 +10,8 @@ fase, cada decisión, los resultados (redacción tipo TFM) y las limitaciones.
 🌐 **English version: [`english/README.md`](english/README.md)** — full mirror (docs, code, tests).
 This Spanish README is the canonical/reference version; the English one is kept in sync with it.
 
+![Efecto A/B estimado sobre el AOV, IC 95%, con MDE de relevancia declarado](outputs/figures/f4_03_ab_efecto.png)
+
 ---
 
 ## ⚠️ Nota de honestidad metodológica (léela antes que la decisión de abajo)

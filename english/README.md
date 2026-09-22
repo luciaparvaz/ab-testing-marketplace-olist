@@ -10,6 +10,8 @@ every phase, every decision, the results (written as a thesis-style report) and 
 🇪🇸 **Versión canónica en español: [`../README.md`](../README.md)**. This is a full mirror kept in
 sync with it; if the two ever disagree, the Spanish version is the source of truth.
 
+![Estimated A/B effect on AOV, 95% CI, against the declared relevance MDE](outputs/figures/f4_03_ab_effect.png)
+
 ---
 
 ## ⚠️ Note on methodological honesty (read this before the decision below)

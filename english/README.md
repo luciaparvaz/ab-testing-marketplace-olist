@@ -53,7 +53,7 @@ requires, per the project's own cost model
 the true injected effect (+5%) and the observed one (+5.7%). Publishing "LAUNCH" using a R$ impact
 computed on the real volume, but a relevance threshold designed for a ~7x larger marketplace, was
 the internal contradiction that motivated this correction (see `2_impacto_negocio` in
-[`outputs/tables/fase5_resumen.json`](outputs/tables/fase5_resumen.json) for the full numeric
+[`outputs/tables/phase5_summary.json`](outputs/tables/phase5_summary.json) for the full numeric
 detail, including the decision that would have been published under the declared MDE without this
 fix).
 
@@ -75,7 +75,7 @@ fix).
 - **The power to reject H0 is not the power of the decision rule.** The design rejects H0 almost
   always (empirical power ≈ 100%), but the gate "95% CI entirely above the MDE" only fires in
   **~50% of 500 re-randomizations** (`8_ab_multiseed` in
-  [`outputs/tables/fase4_resumen.json`](outputs/tables/fase4_resumen.json)). This repo's split
+  [`outputs/tables/phase4_summary.json`](outputs/tables/phase4_summary.json)). This repo's split
   (`SEED=42`) gave LAUNCH under the declared MDE because it happened to benefit from a favorable
   baseline imbalance in the primary metric (~+1.2 pp, now in the formal balance table below) — not
   because the design is "amply powered" for that decision.

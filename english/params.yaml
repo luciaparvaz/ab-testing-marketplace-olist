@@ -1,0 +1,64 @@
+# Parameters of the simulated experiment and of the analysis.
+# SINGLE source of truth — edit here, never in the code.
+# Loaded by src/config.py; used by all scripts and the notebook.
+
+seed: 42
+alpha: 0.05                 # significance level, two-tailed test
+
+# --- Synthetic treatment effect (diluted model, docs/01 §1.7b) ---
+effect:
+  p_resp: 0.20              # fraction of treated units that respond to the redesign
+  delta_resp: 0.25          # multiplicative effect among responders (+25%)
+  eps_sd: 0.05              # Gaussian noise on each responder's effect
+  # ATE (mean effect) = p_resp * delta_resp = 0.05  -> computed in config.py
+
+# --- Business decision criterion ---
+mde_relevancia_pct: 3.0    # minimum AOV lift that justifies the cost (see cost_model)
+target_power: 0.80
+
+# --- Two-gate rule for guardrails (docs/01 §1.4; corrected after global audit §D19) ---
+# A guardrail blocks the launch only if it is significant after BH AND its magnitude exceeds the
+# business threshold (see modeling.py::run_ab_test).
+# g4_n_items_relative_drop_pct (portfolio review, closes §D19/priority 4): G4 used to have no
+# quantified magnitude threshold ("relevant magnitude" with no number) and blocked on significance
+# alone -- with n~47k/group that means a drop of 0.002 items/order would be enough to block the
+# launch, exactly the problem the two-gate rule exists to prevent (see
+# guardrail_regression_scenarios). Threshold chosen on the same footing as g3 (relative fraction
+# of the control value, not an absolute R$/item): a 5% drop in the mean items per order
+# (control≈1.14 -> ~0.057 items) is the minimum magnitude a product owner would recognize as a
+# signal that the redesign pushes people to buy fewer items, not sampling noise.
+# g3_freight_relative_rise_pct_fallback (thorough audit, closes G3's blind spot): the original G3
+# rule ("rises >= 20% of the AOV rise") requires aov_diff > 0 to even evaluate magnitude -- if AOV
+# is flat or falling, G3 never blocks, no matter how much freight rises, which is precisely the
+# worst-case scenario (shipping gets pricier without the order getting more valuable). This second
+# threshold is a fallback branch that is ALWAYS evaluated (independent of whether AOV rises): a 15%
+# rise over the control mean freight (~R$22.74 -> ~R$3.41) is the minimum magnitude a product owner
+# would recognize as a real shipping-cost increase, not sampling noise. G3 blocks if EITHER branch
+# is exceeded (see modeling.py::run_ab_test).
+guardrail_thresholds:
+  g1_review_score_pts: 0.05
+  g2_cancelacion_pp: 0.2
+  g3_freight_share_of_aov_rise_pct: 20.0
+  g3_freight_relative_rise_pct_fallback: 15.0
+  g4_n_items_relative_drop_pct: 5.0
+
+# --- Data preparation (Phase 3) ---
+window_start: "2017-01-01"
+window_end: "2018-09-01"   # exclusive -> includes up to 2018-08-31
+valid_status: [delivered, shipped, invoiced, approved, processing]
+winsor_q: 0.995            # winsorization of the primary metric ONLY for the significance test
+
+# --- Simulations (all with a fixed seed -> reproducible bit for bit) ---
+n_sim_aa: 2000             # A/A partitions for calibration
+n_sim_power: 1000          # replicates of the simulated power analysis
+n_sim_multiseed: 500       # replicates of the full A/B test (CI coverage)
+n_bootstrap: 10000
+
+# --- Cost model to derive the relevance MDE (illustrative) ---
+cost_model:
+  aov_base: 137.0
+  commission: 0.15                 # marketplace take rate on GMV
+  net_margin_on_commission: 0.80
+  build_cost: 250000               # R$, one-off build cost
+  maint_cost_year: 80000           # R$/year
+  payback_years: 2

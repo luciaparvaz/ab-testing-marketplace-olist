@@ -1,0 +1,200 @@
+{
+  "parameters": {
+    "SEED": 42,
+    "ATE_declared_pct": 5.0,
+    "MDE_relevance_pct": 3.0
+  },
+  "1_primary_result": {
+    "lift_pct": 5.666,
+    "CI95_lift_pct": [
+      3.994,
+      7.337
+    ],
+    "diff_abs_R$": 7.58,
+    "p_value": 3.09e-11,
+    "log10_p": -10.51,
+    "t_stat": 6.64,
+    "n_control": 47280,
+    "n_treatment": 47423,
+    "significant": true,
+    "ci_entirely_above_MDE": true,
+    "relevant": true
+  },
+  "2_business_impact": {
+    "valid_orders_window_no_dedup": 97905,
+    "window_months": 20,
+    "estimated_orders_per_year": 58743,
+    "AOV_base_R$": 137.04,
+    "GMV_merchandise_annual_estimated_R$": 8049993,
+    "uplift_GMV_annual_R$": 456084,
+    "uplift_GMV_annual_CI95_R$": [
+      321514,
+      590655
+    ],
+    "uplift_marketplace_revenue_annual_R$_assuming_15pct_commission": 68413,
+    "note": "GMV = merchandise value. The marketplace's revenue is a commission (take rate) on the GMV; 15% is assumed for illustrative purposes. Linear extrapolation of the per-order lift to the historical annual volume.",
+    "MDE_vs_volume_consistency": {
+      "declared_MDE_pct": 3.0,
+      "volume_used_in_extrapolation_orders_year": 58743,
+      "min_volume_for_+3pct_MDE_to_break_even": 415653,
+      "MDE_break_even_AT_REAL_dataset_volume_pct": 21.23,
+      "real_volume_is_consistent_with_declared_MDE": false,
+      "reading": "The +3.0% MDE used as the relevance gate (§1.5) is only break-even from ~415,653 orders/year. The impact above is extrapolated over ~58,743 orders/year (this dataset's REAL volume) -- at that scale, the project's own cost model requires a break-even of ~+21.2%, not +3.0%. The +3% MDE only makes sense as a decision threshold if you implicitly assume a marketplace ~7x larger than Olist in this dataset; at the real scale, neither the true injected lift (+5%) nor the one observed in the SEED=42 split (~+5.7%) clears the real break-even. See '6_decision' for how this conditions the final recommendation."
+    }
+  },
+  "3_ancova": {
+    "unadjusted": {
+      "coef_treat_R$": 7.58,
+      "lift_pct": 5.666,
+      "ci95_pct": [
+        3.994,
+        7.337
+      ],
+      "se_R$": 1.1411
+    },
+    "adjusted": {
+      "coef_treat_R$": 6.948,
+      "lift_pct": 5.193,
+      "ci95_pct": [
+        3.709,
+        6.677
+      ],
+      "se_R$": 1.013
+    },
+    "SE_reduction_pct": 11.23,
+    "non_baseline_covariate_warning": "thorough audit: n_items, freight_value and cat_grupo are attributes of the ORDER AS ALREADY PLACED, not baseline covariates measured before treatment -- and the business hypothesis itself (§1.1) is that the redesign (cross-sell) pushes customers to add items, exactly what n_items/cat_grupo measure. Harmless here by construction: the synthetic effect (inject_diluted_effect) only scales merch_value, never touches these variables, so there is no real 'bad control' bias in this simulation. In a REAL deployment, before reusing this ANCOVA with the same controls, one would need to verify they are strictly pre-treatment (e.g. dominant category from purchase history before this order, not from the order under test) -- adjusting for a variable the treatment itself can move biases the estimated effect."
+  },
+  "4_segments": {
+    "prespecified_segments": [
+      "cesta",
+      "payment_type",
+      "macro_region",
+      "trimestre",
+      "cat_grupo"
+    ],
+    "interaction_test": {
+      "cesta": {
+        "p_raw": 0.9242,
+        "p_BH": 0.9242,
+        "heterogeneity_significant_after_BH": false,
+        "n_per_level": {
+          "1 item": 85416,
+          "2+ items": 9287
+        }
+      },
+      "payment_type": {
+        "p_raw": 0.3766,
+        "p_BH": 0.9242,
+        "heterogeneity_significant_after_BH": false,
+        "n_per_level": {
+          "boleto": 18897,
+          "credit_card": 71462,
+          "debit_card": 1468,
+          "voucher": 2876
+        }
+      },
+      "macro_region": {
+        "p_raw": 0.6801,
+        "p_BH": 0.9242,
+        "heterogeneity_significant_after_BH": false,
+        "n_per_level": {
+          "Midwest": 5532,
+          "North": 1772,
+          "Northeast": 9021,
+          "South": 13504,
+          "Southeast": 64874
+        }
+      },
+      "trimestre": {
+        "p_raw": 0.7942,
+        "p_BH": 0.9242,
+        "heterogeneity_significant_after_BH": false,
+        "n_per_level": {
+          "2017Q1": 5014,
+          "2017Q2": 8969,
+          "2017Q3": 12029,
+          "2017Q4": 17018,
+          "2018Q1": 20240,
+          "2018Q2": 19207,
+          "2018Q3": 12226
+        }
+      },
+      "cat_grupo": {
+        "p_raw": 0.1353,
+        "p_BH": 0.6764,
+        "heterogeneity_significant_after_BH": false,
+        "n_per_level": {
+          "bed_bath_table": 8850,
+          "computers_accessories": 6394,
+          "furniture_decor": 5963,
+          "health_beauty": 8458,
+          "housewares": 5589,
+          "other": 52140,
+          "sports_leisure": 7309
+        }
+      }
+    },
+    "test_scale": "log(AOV), HC3 Wald -> tests heterogeneity of the RELATIVE effect (%), robust to the between-group heteroscedasticity; at the level scale the multiplicative effect mechanically generates absolute heterogeneity in large baskets",
+    "verdict": "no significant interaction (neither raw nor after BH) -> the relative effect is HOMOGENEOUS across segments, consistent with the design (random responders). Looking for 'where it works best' without correction would be p-hacking.",
+    "non_baseline_segments_warning": "thorough audit: 'cesta' (n_items>=2) and 'cat_grupo', like in the ANCOVA (§3), are attributes of the order as already placed -- harmless here by construction, but in a real deployment, segmenting by a variable the treatment itself can move does not give a valid causal subgroup effect (the subgroup itself would be post-treatment)."
+  },
+  "5_p_hacking": {
+    "n_exploratory_cuts": 38,
+    "expected_by_chance_at_0.05": 1.9,
+    "test": "treat x cut interaction, HC3 Wald",
+    "test_at_LEVEL_(mv_w)": {
+      "nominal_p<0.05": {
+        "n": 5,
+        "which": [
+          "category:bed_bath_table",
+          "category:health_beauty",
+          "freight_q:q1",
+          "freight_q:q2",
+          "freight_q:q4"
+        ]
+      },
+      "after_BH": {
+        "n": 3,
+        "which": [
+          "category:bed_bath_table",
+          "freight_q:q1",
+          "freight_q:q4"
+        ]
+      },
+      "after_Bonferroni": 2
+    },
+    "test_at_LOG_(relative_effect)": {
+      "nominal_p<0.05": {
+        "n": 2,
+        "which": [
+          "category:bed_bath_table",
+          "category:health_beauty"
+        ]
+      },
+      "after_BH": {
+        "n": 0,
+        "which": []
+      },
+      "after_Bonferroni": 0
+    },
+    "lesson": "(1) At LEVEL scale several 'segments where the effect differs' survive even BH and Bonferroni: they are NOT chance, they are a MECHANICAL ARTIFACT of the multiplicative effect (the lift in R$ is larger in large baskets), concentrated in the cuts correlated with size (freight quartiles). (2) At LOG scale (the relative effect, which is the business question) only chance-level nominal findings remain, and NONE survives the correction. Moral: (a) test the correct magnitude (%, not absolute R$), (b) pre-specify segments, (c) correct for multiplicity. Correcting is not enough if the estimand is wrong to begin with."
+  },
+  "6_decision": {
+    "decision": "ITERATE",
+    "decision_under_declared_MDE_+3pct_ignoring_volume": "LAUNCH",
+    "justification": [
+      "Primary effect +5.67% (95% CI [3.99, 7.34]), log10(p) = -10.51 -> highly significant.",
+      "At the dataset's REAL volume (~58,743 orders/year), the cost model's break-even is +21.2% (not the declared +3.0%, calibrated for a much larger marketplace) -> the 95% CI of the effect does NOT clear that real threshold entirely.",
+      "No guardrail degraded (Phase 4, Benjamini-Hochberg).",
+      "Homogeneous effect across pre-specified segments (no interaction after BH).",
+      "Covariate-adjusted estimate (ANCOVA): +5.193% with SE 11.23% lower.",
+      "Estimated impact: +R$ 456,084/year of merchandise GMV (CI [321,514, 590,655]) -- insufficient to cover the redesign's cost (R$ 410,000 over 2 years) at the dataset's real volume."
+    ],
+    "caveats": [
+      "The effect is synthetic and declared: this 'decision' validates the process, not a real finding.",
+      "The point estimate exceeds the injected ATE (+5%) because of the split's baseline imbalance (see balance_check.py, now includes merch_value in the formal table); the CI covers it.",
+      "The power of this decision rule (not just of rejecting H0) is measured in fase4_resumen.json::8_ab_multiseed -- under the declared MDE, the 'LAUNCH' gate only fires in a fraction of re-randomizations, not always (see 'decision_rule_power_finding').",
+      "The +3% MDE is not wrong in itself -- it is the correct threshold if the marketplace had ~415k+ orders/year. The problem is publishing a business decision that mixes that threshold with an R$ impact computed over a volume ~7x smaller."
+    ]
+  }
+}

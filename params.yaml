@@ -1,0 +1,64 @@
+# Parámetros del experimento simulado y del análisis.
+# ÚNICA fuente de verdad — editar aquí, nunca en el código.
+# Cargado por src/config.py; usado por todos los scripts y el notebook.
+
+seed: 42
+alpha: 0.05                 # nivel de significación, test bilateral
+
+# --- Efecto de tratamiento sintético (modelo diluido, docs/01 §1.7b) ---
+effect:
+  p_resp: 0.20              # fracción de tratados que responden al rediseño
+  delta_resp: 0.25          # efecto multiplicativo entre respondedores (+25 %)
+  eps_sd: 0.05              # ruido gaussiano sobre el efecto de cada respondedor
+  # ATE (efecto medio) = p_resp * delta_resp = 0.05  -> se calcula en config.py
+
+# --- Criterio de decisión de negocio ---
+mde_relevancia_pct: 3.0    # lift mínimo de AOV que justifica el coste (ver cost_model)
+target_power: 0.80
+
+# --- Regla de dos puertas para guardrails (docs/01 §1.4; corregida tras auditoría global §D19) ---
+# Un guardrail bloquea el lanzamiento solo si es significativo tras BH Y su magnitud supera el
+# umbral de negocio (ver modeling.py::run_ab_test).
+# g4_n_items_relative_drop_pct (revisión de portfolio, cierra §D19/prioridad 4): antes G4 no tenía
+# umbral de magnitud cuantificado ("magnitud relevante" sin número) y bloqueaba solo por
+# significancia -- con n≈47k/grupo eso significa que una caída de 0,002 ítems/pedido bastaría para
+# bloquear el lanzamiento, exactamente el problema que la regla de dos puertas existe para evitar
+# (ver guardrail_regression_scenarios). Umbral elegido en la misma línea que g3 (fracción relativa
+# del valor de control, no un R$/ítem absoluto): una caída del 5% en el nº medio de ítems por
+# pedido (control≈1,14 -> ~0,057 ítems) es la magnitud mínima que un responsable de producto
+# reconocería como señal de que el rediseño empuja a comprar menos artículos, no ruido de muestreo.
+# g3_freight_relative_rise_pct_fallback (auditoría minuciosa, cierra el punto ciego de G3): la
+# regla original de G3 ("sube >= 20% del alza de AOV") exige aov_diff > 0 para poder evaluar la
+# magnitud -- si el AOV está plano o cae, G3 nunca bloquea, pase lo que pase con el flete, que es
+# precisamente el peor escenario (encarecer el envío sin subir el valor del pedido). Este segundo
+# umbral es una rama de respaldo que SIEMPRE se evalúa (no depende de que el AOV suba): una subida
+# del 15% sobre el flete medio de control (~R$22,74 -> ~R$3,41) es la magnitud mínima que un
+# responsable de producto reconocería como encarecimiento real del envío, no ruido de muestreo.
+# G3 bloquea si CUALQUIERA de las dos ramas se supera (ver modeling.py::run_ab_test).
+guardrail_thresholds:
+  g1_review_score_pts: 0.05
+  g2_cancelacion_pp: 0.2
+  g3_freight_share_of_aov_rise_pct: 20.0
+  g3_freight_relative_rise_pct_fallback: 15.0
+  g4_n_items_relative_drop_pct: 5.0
+
+# --- Preparación de datos (Fase 3) ---
+window_start: "2017-01-01"
+window_end: "2018-09-01"   # exclusivo -> incluye hasta 2018-08-31
+valid_status: [delivered, shipped, invoiced, approved, processing]
+winsor_q: 0.995            # winsorización de la métrica primaria SOLO para el contraste
+
+# --- Simulaciones (todas con semilla fija -> reproducibles bit a bit) ---
+n_sim_aa: 2000             # particiones A/A para la calibración
+n_sim_power: 1000          # réplicas del power analysis simulado
+n_sim_multiseed: 500       # réplicas del A/B completo (cobertura del IC)
+n_bootstrap: 10000
+
+# --- Modelo de costes para derivar el MDE de relevancia (ilustrativo) ---
+cost_model:
+  aov_base: 137.0
+  commission: 0.15                 # take rate del marketplace sobre el GMV
+  net_margin_on_commission: 0.80
+  build_cost: 250000               # R$, coste único de construir
+  maint_cost_year: 80000           # R$/año
+  payback_years: 2

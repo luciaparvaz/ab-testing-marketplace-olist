@@ -1,0 +1,5 @@
+paso,n_antes,n_despues,delta,justificacion
+ventana_temporal,99441,99092,-349,"restringir a [2017-01-01, 2018-09-01) por realismo (no corrige sesgo, §B6)"
+estados_validos,99092,97905,-1187,"conservar ['approved', 'delivered', 'invoiced', 'processing', 'shipped'] = compra realizada; excluir canceled/unavailable/created"
+pedidos_con_items,97905,97905,0,excluir pedidos sin líneas en order_items (no tienen métrica primaria)
+dedup_1_pedido_cliente,97905,94703,-3202,quedarse con el primer pedido de cada cliente -> unidad aleatorización = unidad análisis (§B3)

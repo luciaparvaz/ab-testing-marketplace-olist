@@ -177,7 +177,7 @@ degradado — y **sale con código ≠ 0** si algo no cuadra.
 ## Stack
 
 Python · pandas · NumPy · SciPy · statsmodels (`TTestIndPower`, `OLS` con errores HC3,
-`multipletests` para Benjamini-Hochberg) · matplotlib · Jupyter / jupytext.
+`multipletests` para Benjamini-Hochberg) · matplotlib · Jupyter / jupytext · desarrollo asistido por IA con Claude Code.
 
 ## Datos y licencia
 

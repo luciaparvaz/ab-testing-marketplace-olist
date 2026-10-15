@@ -179,7 +179,7 @@ rate in [3.5%; 6.5%], A/B CI above the MDE, no SRM, no guardrail degraded — an
 ## Stack
 
 Python · pandas · NumPy · SciPy · statsmodels (`TTestIndPower`, `OLS` with HC3 errors,
-`multipletests` for Benjamini-Hochberg) · matplotlib · Jupyter / jupytext.
+`multipletests` for Benjamini-Hochberg) · matplotlib · Jupyter / jupytext · AI-assisted development with Claude Code.
 
 ## Data and license
 

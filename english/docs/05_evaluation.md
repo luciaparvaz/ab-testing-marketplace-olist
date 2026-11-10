@@ -66,10 +66,13 @@ OLS `AOV_w ~ treatment + n_items + freight + category + macro-region + quarter` 
 | Unadjusted | +5.67% | [+3.99%; +7.34%] | 1.141 |
 | **Adjusted** | **+5.19%** | **[+3.71%; +6.68%]** | **1.013** |
 
-The covariate adjustment **reduces the standard error by 11.2%** (a tighter CI) and **brings the
-estimator closer to the true +5%** — the covariates (mainly number of items and category) explain
-part of the residual noise. This is the standard technique (CUPED / regression) for gaining
-precision without bias.
+The covariate adjustment reduces the standard error by 11.2% and brings the estimator closer to
+the true +5%, but **this ANCOVA is illustrative only and plays no part in the decision** (§5.6).
+It adjusts for attributes of the order itself (number of items, freight, category), which would be
+post-treatment in a real test (see the warning below). With pre-assignment covariates
+(macro-region and quarter), the estimate is unchanged (**+5.68%**, CI [+4.01%; +7.34%]) and the
+standard error barely falls (−0.2%). The decision rests on the primary result: +5.7%
+[+4.0%; +7.3%] (winsorized) and +6.1% [+4.1%; +8.1%] (raw).
 
 > ⚠️ **Warning (thorough audit): `n_items`, `freight_value` and category are not baseline
 > covariates.** They are attributes of the order **as already placed**, not measured before
@@ -160,10 +163,17 @@ what code was fixed.)*
 | Significant primary effect (p ≈ 3·10⁻¹¹) | ✅ |
 | 95% CI of the lift entirely above the **declared** relevance MDE (+3%) | ✅ [+3.99%; +7.34%] |
 | 95% CI of the lift entirely above the *break-even* **at the real volume** (+21.2%) | ❌ — the observed lift (+5.7%) falls well short |
-| Robust estimate (winsor, log, bootstrap, ANCOVA all agree) | ✅ |
+| Robust estimate (winsor, raw, log and bootstrap agree; the §5.3 ANCOVA is illustrative only) | ✅ |
 | No guardrail degraded (G1-G4, Benjamini-Hochberg) | ✅ |
 | Homogeneous relative effect across pre-specified segments | ✅ |
 | Economic impact (+R$ 456k/year GMV) vs. redesign cost (~R$ 410k/2yr) | ⚠️ insufficient at the real volume |
+
+**Basis of the decision:** the primary result, +5.7% [+4.0%; +7.3%] (winsorized) and +6.1%
+[+4.1%; +8.1%] (raw). Neither interval comes close to the real break-even (+21.2%). The ANCOVA
+(+5.19%, §5.3) plays no part: it is illustrative, because it adjusts for attributes of the order
+itself that would be post-treatment in a real test; with pre-assignment covariates (region,
+quarter) the estimate is unchanged (+5.68%) and the variance barely falls. The `justification`
+list in `phase5_summary.json` still includes the ANCOVA line; read it with this caveat.
 
 **Why the decision changed (portfolio correction, not new data):** the +3% MDE is only the correct
 *break-even* for a marketplace with ≥ ~415,000 orders/year
@@ -200,8 +210,8 @@ decision uses the real break-even, not the unadjusted declared one.
 4. **Guardrails with no injected effect**: by design they come out flat. A real experiment would
    also monitor returns and complaints (not available in Olist).
 5. **A single analysis split** (SEED = 42): the point estimate carries that assignment's baseline
-   imbalance; mitigated with the CI, the ANCOVA, and the evidence of unbiasedness over 1,000
-   replicates.
+   imbalance; mitigated with the CI and the evidence of unbiasedness over 1,000 replicates (the
+   §5.3 ANCOVA cannot do this in a real test: its covariates would be post-treatment).
 
 ---
 
@@ -210,7 +220,8 @@ decision uses the real break-even, not the unadjusted declared one.
 - [x] Full reporting: effect, CI, p, size, n — not just significance.
 - [x] Significance (p ≈ 3·10⁻¹¹) **vs.** relevance (CI entirely above the +3% MDE) — both ✅.
 - [x] Economic impact: +R$ 456k/year of GMV [CI +R$ 322k; +R$ 591k].
-- [x] ANCOVA: −11.2% SE, estimator closer to the real value.
+- [x] ANCOVA illustrative only (order-level covariates, post-treatment in a real test); with
+  pre-assignment covariates (region, quarter): +5.68%, with almost no variance reduction.
 - [x] Pre-specified segments + BH: **no heterogeneity**.
 - [x] p-hacking demonstrated (level vs. log; BH vs. Bonferroni).
 - [x] **Decision: ITERATE** (the effect is real but doesn't clear the break-even at the dataset's

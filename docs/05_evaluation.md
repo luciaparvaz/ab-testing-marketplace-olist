@@ -66,9 +66,13 @@ OLS `AOV_w ~ treatment + n_items + freight + categoría + macro-región + trimes
 | Sin ajuste | +5,67 % | [+3,99 % ; +7,34 %] | 1,141 |
 | **Con ajuste** | **+5,19 %** | **[+3,71 % ; +6,68 %]** | **1,013** |
 
-El ajuste por covariables **reduce el error estándar un 11,2 %** (IC más estrecho) y **acerca el
-estimador al +5 % verdadero** — las covariables (sobre todo nº de ítems y categoría) explican parte
-del ruido residual. Es la técnica estándar (CUPED / regresión) para ganar precisión sin sesgo.
+El ajuste por covariables reduce el error estándar un 11,2 % y acerca el estimador al +5 %
+verdadero, pero **este ANCOVA es solo ilustrativo y no interviene en la decisión** (§5.6). Usa
+covariables del propio pedido (nº de ítems, flete, categoría), que en un test real serían
+post-tratamiento (ver el aviso de abajo). Con covariables previas a la asignación (macrorregión y
+trimestre), la estimación no cambia (**+5,68 %**, IC [+4,01 %; +7,34 %]) y el error estándar apenas
+baja (−0,2 %). La decisión se apoya en el resultado primario: +5,7 % [+4,0 %; +7,3 %] (winsorizado)
+y +6,1 % [+4,1 %; +8,1 %] (crudo).
 
 > ⚠️ **Aviso (auditoría minuciosa): `n_items`, `freight_value` y `categoría` no son covariables
 > basales.** Son atributos del pedido **ya realizado**, no medidos antes del tratamiento — y la
@@ -157,10 +161,17 @@ qué cambió y con qué código se corrigió.)*
 | Efecto primario significativo (p ≈ 3·10⁻¹¹) | ✅ |
 | IC 95 % del lift enteramente por encima del MDE **declarado** (+3 %) | ✅ [+3,99 % ; +7,34 %] |
 | IC 95 % del lift enteramente por encima del *break-even* **al volumen real** del dataset (+21,2 %) | ❌ — el lift observado (+5,7 %) queda muy por debajo |
-| Estimación robusta (winsor, log, bootstrap, ANCOVA todas concordantes) | ✅ |
+| Estimación robusta (winsor, crudo, log y bootstrap concordantes; el ANCOVA de §5.3 es solo ilustrativo) | ✅ |
 | Ningún guardrail degradado (G1–G4, Benjamini-Hochberg) | ✅ |
 | Efecto relativo homogéneo entre segmentos pre-especificados | ✅ |
 | Impacto económico material (+R$ 456 k/año GMV) frente al coste del rediseño (~R$ 410k/2 años) | ⚠️ insuficiente al volumen real del dataset |
+
+**Base de la decisión:** el resultado primario, +5,7 % [+4,0 %; +7,3 %] (winsorizado) y +6,1 %
+[+4,1 %; +8,1 %] (crudo). Ninguno de los dos intervalos se acerca al break-even real (+21,2 %). El
+ANCOVA (+5,19 %, §5.3) no interviene: es ilustrativo, porque usa covariables del propio pedido que
+en un test real serían post-tratamiento; con covariables previas a la asignación (región,
+trimestre) la estimación no cambia (+5,68 %) y la varianza apenas baja. La lista `justificacion` de
+`fase5_resumen.json` todavía incluye la línea del ANCOVA; léase con esta salvedad.
 
 **Por qué cambió la decisión (corrección de portfolio, no un nuevo dato):** el MDE de +3 % es el
 *break-even* correcto solo para un marketplace con ≥ ~415.000 pedidos/año
@@ -197,7 +208,8 @@ usa el break-even real, no el declarado sin ajustar.
 4. **Guardrails sin efecto inyectado**: por diseño salen planos. Un experimento real vigilaría
    además devoluciones y reclamaciones (no disponibles en Olist).
 5. **Un solo split de análisis** (SEED = 42): el estimador puntual carga el desbalance basal de esa
-   asignación; mitigado con el IC, la ANCOVA y la evidencia de insesgadez sobre 1.000 réplicas.
+   asignación; mitigado con el IC y la evidencia de insesgadez sobre 1.000 réplicas (el ANCOVA de
+   §5.3 no sirve para esto en un test real: sus covariables serían post-tratamiento).
 
 ---
 
@@ -206,7 +218,8 @@ usa el break-even real, no el declarado sin ajustar.
 - [x] Reporte completo: efecto, IC, p, tamaño, n — no solo significancia.
 - [x] Significancia (p ≈ 3·10⁻¹¹) **vs** relevancia (IC entero sobre el MDE +3 %) — ambas ✅.
 - [x] Impacto económico: +R$ 456 k/año de GMV [IC +R$ 322 k ; +R$ 591 k].
-- [x] ANCOVA: −11,2 % de SE, estimador más cerca del valor real.
+- [x] ANCOVA solo ilustrativo (covariables del pedido, post-tratamiento en un test real); con
+  covariables previas a la asignación (región, trimestre): +5,68 %, sin apenas reducción de varianza.
 - [x] Segmentos pre-especificados + BH: **sin heterogeneidad**.
 - [x] p-hacking demostrado (nivel vs log; BH vs Bonferroni).
 - [x] **Decisión: ITERAR** (el efecto es real pero no supera el break-even al volumen real del

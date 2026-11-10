@@ -90,6 +90,9 @@ print(" ", config.summary())
 # | **Relevance MDE** | **+3%** — *derived* from a break-even model (`src/mde_cost_model.py`) |
 # | **Decision rule** | LAUNCH if p < 0.05 **and** 95% CI of the lift entirely above +3% **and** no guardrail degraded; ITERATE if significant but the CI touches the MDE; DO NOT LAUNCH otherwise |
 #
+# > **Note:** this is the pre-registered rule, with the +3% MDE. The headline decision (Phase 5)
+# > compares the CI with the *break-even* at the dataset's real volume (+21.2%), not with +3%.
+#
 # Detail: `docs/01_business_understanding.md`.
 
 # %%
@@ -239,6 +242,16 @@ display(Image(str(FIGURES / "f_mde_breakeven.png")))
 # %% [markdown]
 # ---
 # ## Phase 5 — Evaluation
+#
+# **How to read the next cell.** `RELEVANT` compares the 95% CI with the **pre-registered +3%
+# MDE**, not with the *break-even* at the real volume (+21.2%), which is what drives the decision.
+# That is why it can print `True` while the decision is ITERATE.
+#
+# The decision rests on the **primary result**: +5.7% [+4.0%; +7.3%] (winsorized) and +6.1%
+# [+4.1%; +8.1%] (raw). The ANCOVA (+5.19%), printed below and also listed in the decision's
+# justification, is **illustrative only**: it adjusts for attributes of the order itself (number
+# of items, freight, category), which would be post-treatment in a real test. With pre-assignment
+# covariates (region, quarter), the estimate is unchanged (+5.68%) and the variance barely falls.
 
 # %%
 f5 = rj("phase5_summary.json")

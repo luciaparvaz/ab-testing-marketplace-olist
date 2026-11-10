@@ -259,19 +259,3 @@ si R_i = 0:  aov_T_i = aov_C_i                     # sin cambio
   robusto para t-test; formalmente no normal, pero irrelevante por el TCL a n grande). Preview de
   potencia: efecto detectable ~+2,7 % (crudo) / ~+2,3 % (winsorizado) — la validación real es la
   potencia empírica de la Fase 4.
-
----
-
-## 1.10 Riesgo de timeline (aviso explícito)
-
-El metaprompt asigna la *Business Understanding* + *Modeling (diseño)* al Bloque 3 (2,5 h, Día 1).
-La elección de ejecutar **A/A y A/B** ("Ambos") añade trabajo respecto a solo A/B:
-
-- Coste incremental estimado: **+1 a +1,5 h**, concentrado en la Fase 4 (bucle de 1.000 semillas del
-  A/A + test KS de uniformidad de p-valores) y en la Fase 5 (redacción de la validación).
-- El grueso del código se **comparte** entre A/A y A/B (misma asignación, mismos tests, mismo power
-  analysis), por lo que no se duplica el esfuerzo.
-- **Absorción propuesta:** Bloque 6 (Contingencia, 1,5 h, Día 2). Si aun así desborda, el recorte
-  sería reducir el bucle A/A de 1.000 a 500 semillas (sigue siendo suficiente para estimar una tasa
-  de falsos positivos del ~5 % con precisión aceptable) — **nunca** recortar el power analysis ni la
-  verificación de supuestos.

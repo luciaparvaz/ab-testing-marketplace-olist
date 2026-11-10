@@ -65,7 +65,7 @@ def reproducibility_report() -> bool:
          and len(f5["6_decision"]["justification"]) > 0),
         ("A/A: false positives in [0.035, 0.065]", 0.035 <= aa <= 0.065),
         ("A/B primary: significant", prim["significant"]),
-        ("A/B primary: 95% CI above the MDE", prim["relevant"]),
+        ("A/B primary: 95% CI above the pre-registered +3% MDE, not the break-even", prim["relevant"]),
         ("A/B multi-seed (raw): |bias| < 0.3 pp", abs(ms["bias_pp"]) < 0.3),
         ("A/B multi-seed (raw): CI coverage in [0.90, 0.98]", 0.90 <= ms["CI95_coverage_of_+5pct"] <= 0.98),
         ("no SRM (p > 0.01)", float(srm["p_value"]) > 0.01),

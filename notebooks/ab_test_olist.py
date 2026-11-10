@@ -89,6 +89,9 @@ print(" ", config.summary())
 # | **MDE de relevancia** | **+3 %** — *derivado* de un modelo de break-even (`src/mde_cost_model.py`) |
 # | **Regla de decisión** | LANZAR si p < 0,05 **y** IC 95 % del lift enteramente por encima de +3 % **y** ningún guardrail degradado; ITERAR si significativo pero el IC toca el MDE; NO LANZAR en otro caso |
 #
+# > **Nota:** esta es la regla preregistrada, con el MDE del +3 %. La decisión titular (Fase 5)
+# > compara el IC con el *break-even* al volumen real del dataset (+21,2 %), no con el +3 %.
+#
 # Detalle: `docs/01_business_understanding.md`.
 
 # %%
@@ -238,6 +241,16 @@ display(Image(str(FIGURES / "f_mde_breakeven.png")))
 # %% [markdown]
 # ---
 # ## Fase 5 — Evaluación (Evaluation)
+#
+# **Cómo leer la celda siguiente.** `RELEVANTE` compara el IC 95 % con el **MDE preregistrado
+# del +3 %**, no con el *break-even* al volumen real (+21,2 %), que es el que decide. Por eso puede
+# salir `True` y la decisión ser ITERAR.
+#
+# La decisión se apoya en el **resultado primario**: +5,7 % [+4,0 %; +7,3 %] (winsorizado) y
+# +6,1 % [+4,1 %; +8,1 %] (crudo). El ANCOVA (+5,19 %), que se imprime abajo y figura también en la
+# justificación de la decisión, es **solo ilustrativo**: usa covariables del propio pedido (nº de
+# ítems, flete, categoría), que en un test real serían post-tratamiento. Con covariables previas a
+# la asignación (región, trimestre), la estimación no cambia (+5,68 %) y la varianza apenas baja.
 
 # %%
 f5 = rj("fase5_resumen.json")

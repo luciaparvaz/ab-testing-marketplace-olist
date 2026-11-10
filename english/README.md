@@ -51,6 +51,12 @@ scale (see below). This is not a "doesn't work" verdict: it's "works, but not en
 the redesign's cost at this volume — the design or the business case would need to be iterated on
 before investing."
 
+The decision rests on the **primary result**: +5.7% [+4.0%; +7.3%] (winsorized) and +6.1%
+[+4.1%; +8.1%] (raw). Both intervals fall well short of the real break-even. The Phase 5 ANCOVA
+(+5.19%) is **illustrative only**: it adjusts for attributes of the order itself (number of items,
+freight, category), which would be post-treatment in a real test. With pre-assignment covariates
+(region, quarter), the estimate is unchanged (+5.68%) and the variance barely falls.
+
 The +3% MDE declared in Phase 1 (`docs/01_business_understanding.md`) is only break-even for a
 marketplace with **≥ ~415,000 orders/year**. This dataset's real volume (~58,700 orders/year)
 requires, per the project's own cost model
@@ -72,7 +78,7 @@ fix).
 | **2 · Data Understanding** | Profiling aimed at the question; **CC BY-NC-SA 4.0** license verified | Mean AOV R$ 137 · **CV 1.52 · skew 9.8** · `log(AOV)` nearly symmetric |
 | **3 · Data Preparation** | 2017-01/2018-08 window · dedup to 1 order/customer · p99.5 winsorization only for the significance test · simulated assignment | 94,703 order-customers · **balance OK** (\|SMD\| ≤ 0.02) · **SRM OK** (p = 0.64) |
 | **4 · Modeling** | Power analysis · assumptions · 2,000-partition A/A · A/B test · multi-seed A/B (incl. decision-rule power) · guardrail regression (two gates, G1-G4 quantified) · heterogeneous effect · clustered SE · cost model for the MDE | Detectable MDE **+2.3%** · A/A calibrated · dilution **< 1 pp** · +3% MDE = break-even **only at ≥ ~415k orders/year** |
-| **5 · Evaluation** | Significance vs. relevance (at the REAL volume, not the MDE calibrated for a different scale) · ANCOVA · segments + BH · p-hacking | **+5.7% (winsor) / +6.1% (raw)**, both significant but below the real break-even (+21.2%) · guardrails intact · homogeneous effect → **ITERATE** |
+| **5 · Evaluation** | Significance vs. relevance (at the REAL volume, not the MDE calibrated for a different scale) · ANCOVA (illustrative) · segments + BH · p-hacking | **+5.7% (winsor) / +6.1% (raw)**, both significant but below the real break-even (+21.2%) · guardrails intact · homogeneous effect → **ITERATE** |
 | **6 · Deployment** | Executive summary · notebook · README · LinkedIn post | [`docs/executive_summary.md`](docs/executive_summary.md) · [`notebooks/ab_test_olist.ipynb`](notebooks/ab_test_olist.ipynb) |
 
 ### Methodological findings of the project
@@ -135,7 +141,7 @@ fix).
 │   └── ab_test_olist.py         # jupytext source (version control)
 ├── outputs/{figures,tables}/    # figures + JSON/CSV results (regenerable)
 ├── docs/                        # full_report · dashboard.html · 01..06 per phase · exec. summary · LinkedIn post
-├── requirements.txt · pytest.ini · LICENSE
+├── pytest.ini · LICENSE         # requirements.txt is shared: ../requirements.txt (repo root)
 ```
 
 ---
@@ -143,7 +149,7 @@ fix).
 ## Reproduce
 
 ```bash
-pip install -r requirements.txt
+pip install -r ../requirements.txt   # run from english/; the requirements file is shared, at the repo root
 
 # data (not versioned, due to the CC BY-NC-SA 4.0 license)
 python -m kaggle datasets download -d olistbr/brazilian-ecommerce -p data/raw --unzip
@@ -159,7 +165,8 @@ python src/build_dashboard.py # regenerates docs/dashboard.html from outputs/
 that the decision is one of LAUNCH/ITERATE/DO NOT LAUNCH with its justification (not that it has
 to be "LAUNCH" specifically — an acceptance criterion fixed on the outcome isn't falsifiable, see
 `tests/test_outputs.py::test_decision_consistent_with_real_volume_breakeven`), A/A false-positive
-rate in [3.5%; 6.5%], A/B CI above the MDE, no SRM, no guardrail degraded — and **exits with code
+rate in [3.5%; 6.5%], A/B CI above the pre-registered +3% MDE (not the break-even at the real
+volume, which is what drives the decision), no SRM, no guardrail degraded — and **exits with code
 ≠ 0** if something doesn't check out.
 
 ### Reproducible design
@@ -179,7 +186,10 @@ rate in [3.5%; 6.5%], A/B CI above the MDE, no SRM, no guardrail degraded — an
 ## Stack
 
 Python · pandas · NumPy · SciPy · statsmodels (`TTestIndPower`, `OLS` with HC3 errors,
-`multipletests` for Benjamini-Hochberg) · matplotlib · Jupyter / jupytext · AI-assisted development with Claude Code.
+`multipletests` for Benjamini-Hochberg) · matplotlib · Jupyter / jupytext.
+
+Built with AI assistance: I used Claude Code to help implement and review the pipeline. All figures
+can be reproduced with `python run_all.py`.
 
 ## Data and license
 

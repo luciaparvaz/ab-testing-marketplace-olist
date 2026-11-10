@@ -51,6 +51,12 @@ dataset (ver abajo). No es una decisión de "no funciona": es "funciona, pero no
 justificar el coste del rediseño a este volumen — habría que iterar el diseño o el caso de negocio
 antes de invertir".
 
+La decisión se apoya en el **resultado primario**: +5,7 % [+4,0 %; +7,3 %] (winsorizado) y
++6,1 % [+4,1 %; +8,1 %] (crudo). Los dos intervalos quedan muy por debajo del break-even real. El
+ANCOVA de la Fase 5 (+5,19 %) es **solo ilustrativo**: usa covariables del propio pedido (nº de
+ítems, flete, categoría), que en un test real serían post-tratamiento. Con covariables previas a
+la asignación (región, trimestre), la estimación no cambia (+5,68 %) y la varianza apenas baja.
+
 El MDE de +3 % declarado en la Fase 1 (`docs/01_business_understanding.md`) solo es *break-even*
 para un marketplace de **≥ ~415.000 pedidos/año**. El volumen real de este dataset (~58.700
 pedidos/año) exige, según el propio modelo de costes del proyecto
@@ -71,7 +77,7 @@ completo, incluida la decisión que se habría publicado bajo el MDE declarado s
 | **2 · Data Understanding** | Perfilado dirigido; licencia **CC BY-NC-SA 4.0** verificada | AOV media R$ 137 · **CV 1,52 · skew 9,8** · `log(AOV)` casi simétrico |
 | **3 · Data Preparation** | Ventana 2017-01/2018-08 · dedup a 1 pedido/cliente · winsor p99,5 solo para el contraste · asignación simulada | 94.703 pedidos-cliente · **balance OK** (\|SMD\| ≤ 0,02) · **SRM OK** (p = 0,64) |
 | **4 · Modeling** | Power analysis · supuestos · A/A 2.000 part. · test A/B · A/B multi-semilla (incl. potencia de la regla de decisión) · regresión en guardrail (dos puertas, G1–G4 cuantificados) · efecto heterogéneo · clustered-SE · modelo de costes del MDE | MDE detectable **+2,3 %** · A/A calibrado · dilución **< 1 pp** · MDE +3 % = break-even **solo a ≥ ~415k pedidos/año** |
-| **5 · Evaluation** | Significancia vs relevancia (al volumen REAL, no al MDE calibrado para otra escala) · ANCOVA · segmentos + BH · p-hacking | **+5,7 % (winsor) / +6,1 % (crudo)**, ambos significativos pero por debajo del break-even real (+21,2 %) · guardrails intactos · efecto homogéneo → **ITERAR** |
+| **5 · Evaluation** | Significancia vs relevancia (al volumen REAL, no al MDE calibrado para otra escala) · ANCOVA (ilustrativo) · segmentos + BH · p-hacking | **+5,7 % (winsor) / +6,1 % (crudo)**, ambos significativos pero por debajo del break-even real (+21,2 %) · guardrails intactos · efecto homogéneo → **ITERAR** |
 | **6 · Deployment** | Resumen ejecutivo · notebook · README · post LinkedIn | [`docs/resumen_ejecutivo.md`](docs/resumen_ejecutivo.md) · [`notebooks/ab_test_olist.ipynb`](notebooks/ab_test_olist.ipynb) |
 
 ### Hallazgos metodológicos del proyecto
@@ -157,8 +163,9 @@ python src/build_dashboard.py # regenera docs/dashboard.html a partir de outputs
 que la decisión sea una de LANZAR/ITERAR/NO LANZAR con su justificación (no que tenga que ser
 "LANZAR" en concreto — un criterio de aceptación fijado sobre el resultado no es falsable, ver
 `tests/test_outputs.py::test_decision_consistent_with_real_volume_breakeven`), tasa de falsos
-positivos del A/A en [3,5 %; 6,5 %], IC del A/B por encima del MDE, sin SRM, ningún guardrail
-degradado — y **sale con código ≠ 0** si algo no cuadra.
+positivos del A/A en [3,5 %; 6,5 %], IC del A/B por encima del MDE preregistrado del +3 % (no del
+break-even al volumen real, que es el que decide), sin SRM, ningún guardrail degradado — y **sale
+con código ≠ 0** si algo no cuadra.
 
 ### Diseño reproducible
 
@@ -177,7 +184,10 @@ degradado — y **sale con código ≠ 0** si algo no cuadra.
 ## Stack
 
 Python · pandas · NumPy · SciPy · statsmodels (`TTestIndPower`, `OLS` con errores HC3,
-`multipletests` para Benjamini-Hochberg) · matplotlib · Jupyter / jupytext · desarrollo asistido por IA con Claude Code.
+`multipletests` para Benjamini-Hochberg) · matplotlib · Jupyter / jupytext.
+
+Desarrollado con ayuda de IA: usé Claude Code para ayudar a implementar y revisar el pipeline.
+Todas las cifras se pueden reproducir con `python run_all.py`.
 
 ## Datos y licencia
 

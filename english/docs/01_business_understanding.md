@@ -256,18 +256,3 @@ if R_i = 0:  aov_T_i = aov_C_i                     # no change
   (robust range for the t-test; formally not normal, but irrelevant thanks to the CLT at large n).
   Power preview: detectable effect ~+2.7% (raw) / ~+2.3% (winsorized) — the real validation is
   Phase 4's empirical power.
-
----
-
-## 1.10 Timeline risk (explicit warning)
-
-The meta-prompt assigns *Business Understanding* + *Modeling (design)* to Block 3 (2.5h, Day 1).
-The choice to run **both A/A and A/B** ("Both") adds work relative to A/B alone:
-
-- Estimated incremental cost: **+1 to +1.5h**, concentrated in Phase 4 (the 1,000-seed A/A loop +
-  the KS test for p-value uniformity) and in Phase 5 (writing up the validation).
-- Most of the code is **shared** between A/A and A/B (same assignment, same tests, same power
-  analysis), so the effort is not duplicated.
-- **Proposed absorption:** Block 6 (Contingency, 1.5h, Day 2). If it still overflows, the cut would
-  be reducing the A/A loop from 1,000 to 500 seeds (still enough to estimate a ~5% false-positive
-  rate with acceptable precision) — **never** cutting the power analysis or the assumption checks.
